@@ -1,10 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Car, Filter, Loader2, MoreVertical, Plus, Search, Trash2, Truck } from 'lucide-react';
 import Modal from '../components/Modal';
 import { useFirebase } from '../context/FirebaseContext';
 import { vehiclesApi } from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import { canAccess } from '../lib/permissions';
 import { Vehicle } from '../types';
+
+const defaultFormData = {
+  name: '',
+  plate: '',
+  driver: '',
+  type: 'Carga Pesada',
+  km: 0,
+  nextMaintenance: '',
+  status: 'active' as const,
+};
 
 export default function Vehicles() {
   const { userProfile } = useFirebase();
@@ -13,66 +24,63 @@ export default function Vehicles() {
   const canDelete = canAccess(userProfile, 'vehicles', 'delete');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [formData, setFormData] = useState({
-    name: '',
-    plate: '',
-    driver: '',
-    type: 'Carga Pesada',
-    km: 0,
-    nextMaintenance: '',
-    status: 'active' as const,
-  });
+  const [formData, setFormData] = useState(defaultFormData);
 
   const loadVehicles = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       setVehicles(await vehiclesApi.list());
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'Nao foi possivel carregar os veiculos.'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadVehicles();
+    void loadVehicles();
   }, []);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const filteredVehicles = useMemo(
+    () =>
+      vehicles.filter((vehicle) =>
+        (vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (typeFilter === 'all' || vehicle.type === typeFilter) &&
+        (statusFilter === 'all' || vehicle.status === statusFilter)
+      ),
+    [vehicles, searchTerm, typeFilter, statusFilter]
+  );
+
+  const resetForm = () => {
     setEditingVehicle(null);
-    setFormData({
-      name: '',
-      plate: '',
-      driver: '',
-      type: 'Carga Pesada',
-      km: 0,
-      nextMaintenance: '',
-      status: 'active',
-    });
+    setFormData(defaultFormData);
+    setSubmitError('');
+    setIsModalOpen(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      if (editingVehicle) {
-        await vehiclesApi.update(editingVehicle.id, formData);
-      } else {
-        await vehiclesApi.create(formData as Omit<Vehicle, 'id'>);
-      }
-      await loadVehicles();
-      handleCloseModal();
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleOpenCreate = () => {
+    setSubmitError('');
+    setSubmitSuccess('');
+    setEditingVehicle(null);
+    setFormData(defaultFormData);
+    setIsModalOpen(true);
   };
 
   const handleEdit = (vehicle: Vehicle) => {
+    setSubmitError('');
+    setSubmitSuccess('');
     setEditingVehicle(vehicle);
     setFormData({
       name: vehicle.name,
@@ -86,19 +94,52 @@ export default function Vehicles() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Tem certeza que deseja excluir este veículo?')) return;
-    await vehiclesApi.remove(id);
-    await loadVehicles();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError('');
+    setSubmitSuccess('');
+
+    const payload = {
+      ...formData,
+      name: formData.name.trim(),
+      plate: formData.plate.toUpperCase().trim(),
+      driver: formData.driver.trim(),
+    };
+
+    try {
+      if (editingVehicle) {
+        await vehiclesApi.update(editingVehicle.id, payload);
+      } else {
+        await vehiclesApi.create(payload as Omit<Vehicle, 'id'>);
+      }
+
+      await loadVehicles();
+      setSubmitSuccess(editingVehicle ? 'Veiculo atualizado com sucesso.' : 'Veiculo cadastrado com sucesso.');
+      resetForm();
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, 'Nao foi possivel salvar o veiculo.'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const filteredVehicles = vehicles.filter((vehicle) =>
-    (vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.driver.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (typeFilter === 'all' || vehicle.type === typeFilter) &&
-    (statusFilter === 'all' || vehicle.status === statusFilter)
-  );
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este veiculo?')) return;
+
+    setSubmitError('');
+    setSubmitSuccess('');
+    try {
+      await vehiclesApi.remove(id);
+      await loadVehicles();
+      setSubmitSuccess('Veiculo excluido com sucesso.');
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, 'Nao foi possivel excluir o veiculo.'));
+    }
+  };
+
+  const feedbackMessage = submitError || loadError || submitSuccess;
+  const feedbackIsError = Boolean(submitError || loadError);
 
   return (
     <div className="space-y-10">
@@ -108,38 +149,44 @@ export default function Vehicles() {
           <p className="text-on-secondary-container mt-2">Gerencie suas entidades de frota, fornecedores e categorias de despesas em um so lugar.</p>
         </div>
         {canCreate && (
-          <button onClick={() => setIsModalOpen(true)} className="bg-primary text-on-primary rounded-full px-6 py-2.5 font-bold text-sm shadow-sm hover:shadow-md transition-all flex items-center gap-2">
+          <button onClick={handleOpenCreate} className="bg-primary text-on-primary rounded-full px-6 py-2.5 font-bold text-sm shadow-sm hover:shadow-md transition-all flex items-center gap-2">
             <Plus className="w-5 h-5" />
             NOVO CADASTRO
           </button>
         )}
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-4 no-scrollbar">
-        <button className="flex-none px-6 py-2 rounded-full bg-primary-fixed text-on-surface font-bold text-sm transition-all">
-          Veiculos ({vehicles.length})
-        </button>
-      </div>
+      {feedbackMessage && (
+        <div className={`rounded-2xl border px-5 py-4 text-sm font-medium ${feedbackIsError ? 'border-error/20 bg-error/5 text-error' : 'border-primary/20 bg-primary/5 text-primary'}`}>
+          {feedbackMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-12 flex flex-col md:flex-row gap-4">
           <div className="flex-1 bg-surface-container-lowest rounded-xl p-2 flex items-center shadow-sm focus-within:shadow-md transition-shadow">
             <Search className="w-5 h-5 text-outline ml-3" />
-            <input type="text" placeholder="Buscar por placa, modelo ou motorista..." className="w-full border-none focus:ring-0 bg-transparent text-on-surface text-sm py-2 px-4 placeholder:text-outline/60" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input
+              type="text"
+              placeholder="Buscar por placa, modelo ou motorista..."
+              className="w-full border-none focus:ring-0 bg-transparent text-on-surface text-sm py-2 px-4 placeholder:text-outline/60"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
             <div className="h-6 w-px bg-outline/20 mx-2" />
             <div className="flex items-center gap-2 px-2">
               <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="bg-transparent text-primary text-sm font-semibold appearance-none cursor-pointer focus:outline-none">
-                <option value="all">Todos os Tipos</option>
+                <option value="all">Todos os tipos</option>
                 <option value="Carga Pesada">Carga Pesada</option>
                 <option value="Longo Percurso">Longo Percurso</option>
-                <option value="Utilitário">Utilitário</option>
+                <option value="Utilitario">Utilitario</option>
                 <option value="Executivo">Executivo</option>
               </select>
               <div className="h-6 w-px bg-outline/20 mx-2" />
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-transparent text-primary text-sm font-semibold appearance-none cursor-pointer focus:outline-none">
-                <option value="all">Todos os Status</option>
+                <option value="all">Todos os status</option>
                 <option value="active">Ativo</option>
-                <option value="maintenance">Manutenção</option>
+                <option value="maintenance">Manutencao</option>
                 <option value="alert">Alerta</option>
               </select>
               <Filter className="w-4 h-4 text-primary" />
@@ -156,15 +203,15 @@ export default function Vehicles() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <Loader2 className="w-10 h-10 text-primary animate-spin" />
-                <p className="text-on-surface-variant font-medium">Carregando veículos...</p>
+                <p className="text-on-surface-variant font-medium">Carregando veiculos...</p>
               </div>
             ) : filteredVehicles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-20 h-20 bg-surface-container rounded-full flex items-center justify-center text-outline/40 mb-4">
                   <Truck className="w-10 h-10" />
                 </div>
-                <h4 className="text-xl font-bold text-on-surface">Nenhum veículo encontrado</h4>
-                <p className="text-on-surface-variant max-w-xs mt-2">Comece adicionando seu primeiro veículo à frota.</p>
+                <h4 className="text-xl font-bold text-on-surface">Nenhum veiculo encontrado</h4>
+                <p className="text-on-surface-variant max-w-xs mt-2">Comece adicionando seu primeiro veiculo a frota.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -182,22 +229,22 @@ export default function Vehicles() {
                     </div>
                     <div className="hidden sm:block text-right mr-6">
                       <span className="text-sm font-bold text-on-surface">{vehicle.km.toLocaleString()} km</span>
-                      <p className="text-[10px] text-on-secondary-container uppercase">Próxima Manutenção: {vehicle.nextMaintenance || 'N/A'}</p>
+                      <p className="text-[10px] text-on-secondary-container uppercase">Proxima manutencao: {vehicle.nextMaintenance || 'N/A'}</p>
                     </div>
-                      {(canDelete || canUpdate) && (
-                        <div className="flex items-center gap-2">
-                          {canDelete && (
-                            <button onClick={() => handleDelete(vehicle.id)} className="p-2 text-outline hover:text-error transition-colors">
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          )}
-                          {canUpdate && (
-                            <button onClick={() => handleEdit(vehicle)} className="p-2 text-outline hover:text-on-surface transition-colors">
-                              <MoreVertical className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                    {(canDelete || canUpdate) && (
+                      <div className="flex items-center gap-2">
+                        {canDelete && (
+                          <button onClick={() => handleDelete(vehicle.id)} className="p-2 text-outline hover:text-error transition-colors">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+                        {canUpdate && (
+                          <button onClick={() => handleEdit(vehicle)} className="p-2 text-outline hover:text-on-surface transition-colors">
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -206,21 +253,26 @@ export default function Vehicles() {
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingVehicle ? 'Editar Veículo' : 'Novo Veículo'}>
+      <Modal isOpen={isModalOpen} onClose={resetForm} title={editingVehicle ? 'Editar veiculo' : 'Novo veiculo'}>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {submitError && (
+            <div className="rounded-2xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error">
+              {submitError}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Nome do Veículo" value={formData.name} onChange={(value) => setFormData({ ...formData, name: value })} placeholder="Ex: Volvo FH 540" />
-            <Input label="Placa" value={formData.plate} onChange={(value) => setFormData({ ...formData, plate: value })} placeholder="ABC-1234" />
+            <Input label="Nome do veiculo" value={formData.name} onChange={(value) => setFormData({ ...formData, name: value })} placeholder="Ex: Volvo FH 540" />
+            <Input label="Placa" value={formData.plate} onChange={(value) => setFormData({ ...formData, plate: value.toUpperCase() })} placeholder="ABC-1234" />
             <Input label="Motorista" value={formData.driver} onChange={(value) => setFormData({ ...formData, driver: value })} placeholder="Nome do motorista" />
-            <Select label="Tipo" value={formData.type} onChange={(value) => setFormData({ ...formData, type: value })} options={['Carga Pesada', 'Longo Percurso', 'Utilitário', 'Executivo']} />
+            <Select label="Tipo" value={formData.type} onChange={(value) => setFormData({ ...formData, type: value })} options={['Carga Pesada', 'Longo Percurso', 'Utilitario', 'Executivo']} />
             <Input label="Quilometragem" type="number" value={String(formData.km)} onChange={(value) => setFormData({ ...formData, km: Number(value) })} />
-            <Input label="Próxima Manutenção" type="date" value={formData.nextMaintenance} onChange={(value) => setFormData({ ...formData, nextMaintenance: value })} />
+            <Input label="Proxima manutencao" type="date" value={formData.nextMaintenance} onChange={(value) => setFormData({ ...formData, nextMaintenance: value })} />
           </div>
           <div className="pt-6 flex justify-end gap-4">
-            <button type="button" onClick={handleCloseModal} className="px-8 py-3 rounded-full font-bold text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
+            <button type="button" onClick={resetForm} className="px-8 py-3 rounded-full font-bold text-on-surface-variant hover:bg-surface-container transition-colors">Cancelar</button>
             <button disabled={isSubmitting} type="submit" className="bg-primary text-on-primary px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50">
               {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              {editingVehicle ? 'Salvar Alterações' : 'Cadastrar Veículo'}
+              {editingVehicle ? 'Salvar alteracoes' : 'Cadastrar veiculo'}
             </button>
           </div>
         </form>
@@ -233,7 +285,7 @@ function Input({ label, value, onChange, placeholder, type = 'text' }: { label: 
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{label}</label>
-      <input required type={type} className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+      <input required type={type} min={type === 'number' ? 0 : undefined} className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }

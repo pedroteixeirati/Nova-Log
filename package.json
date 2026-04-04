@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 --test-isolation=none server/__tests__/**/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.48.0",

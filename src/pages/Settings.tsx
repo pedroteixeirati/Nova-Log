@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, ChevronRight, Globe, Loader2, Moon, Save, Shield, UserPlus, Wallet } from 'lucide-react';
+import { Bell, ChevronRight, Globe, Info, Loader2, Moon, Shield, UserPlus, Wallet } from 'lucide-react';
 import { useFirebase } from '../context/FirebaseContext';
 import { canAccess } from '../lib/permissions';
 import { logout } from '../firebase';
@@ -7,6 +7,7 @@ import { logout } from '../firebase';
 export default function Settings() {
   const { user, userProfile, signUp } = useFirebase();
   const canManageUsers = canAccess(userProfile, 'users', 'create');
+  const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'financial' | 'operational' | 'driver' | 'viewer'>('driver');
@@ -20,8 +21,9 @@ export default function Settings() {
     setCreateSuccess(false);
     setIsCreating(true);
     try {
-      await signUp(newUserEmail, newUserPassword, newUserRole);
+      await signUp(newUserEmail, newUserPassword, newUserRole, newUserName);
       setCreateSuccess(true);
+      setNewUserName('');
       setNewUserEmail('');
       setNewUserPassword('');
       setNewUserRole('driver');
@@ -32,7 +34,7 @@ export default function Settings() {
       } else if (error.code === 'auth/weak-password') {
         message = 'A senha deve ter pelo menos 6 caracteres.';
       } else if (error.code === 'auth/invalid-email') {
-        message = 'E-mail ou usuario invalido.';
+        message = 'E-mail invalido.';
       }
       setCreateError(message);
     } finally {
@@ -67,12 +69,21 @@ export default function Settings() {
             </div>
             <div className="p-6">
               <form onSubmit={handleCreateUser} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Field label="Usuario ou E-mail">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Field label="Nome do usuario">
+                    <input
+                      type="text"
+                      placeholder="Ex: Joao Silva"
+                      className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="E-mail">
                     <input
                       required
-                      type="text"
-                      placeholder="Ex: joao ou joao@email.com"
+                      type="email"
+                      placeholder="Ex: joao@email.com"
                       className="w-full bg-surface-container border border-outline-variant rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
@@ -157,14 +168,11 @@ export default function Settings() {
           </div>
         </section>
 
-        <div className="pt-6 flex justify-end gap-4">
-          <button className="px-8 py-3 rounded-full font-bold text-on-surface-variant hover:bg-surface-container transition-colors">
-            Cancelar
-          </button>
-          <button className="bg-primary text-on-primary px-8 py-3 rounded-full font-bold flex items-center gap-2 hover:scale-[1.02] transition-transform shadow-lg shadow-primary/20">
-            <Save className="w-5 h-5" />
-            Salvar Alteracoes
-          </button>
+        <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest px-6 py-5 text-sm text-on-surface-variant flex items-start gap-3">
+          <Info className="w-5 h-5 text-primary mt-0.5" />
+          <p>
+            As preferencias desta area sao informativas nesta etapa. As acoes disponiveis hoje sao o gerenciamento de usuarios do tenant e a saida segura da sessao.
+          </p>
         </div>
       </div>
     </div>
@@ -190,7 +198,7 @@ function Preference({
   description: string;
 }) {
   return (
-    <div className="p-6 flex items-center justify-between hover:bg-surface-container transition-colors cursor-pointer">
+    <div className="p-6 flex items-center justify-between hover:bg-surface-container transition-colors">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
           <Icon className="w-5 h-5" />

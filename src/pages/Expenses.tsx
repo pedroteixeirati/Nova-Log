@@ -4,6 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 import Modal from '../components/Modal';
 import { useFirebase } from '../context/FirebaseContext';
 import { expensesApi, vehiclesApi } from '../lib/api';
+import { getErrorMessage } from '../lib/errors';
 import { canAccess } from '../lib/permissions';
 import { cn } from '../lib/utils';
 import { Expense, NavItem, Vehicle } from '../types';
@@ -164,6 +165,9 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [aiSummary, setAiSummary] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -172,6 +176,7 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
   const loadData = async () => {
     if (!user) return;
     setLoading(true);
+    setLoadError('');
     try {
       const [expenseData, vehicleData] = await Promise.all([
         expensesApi.list(),
@@ -186,6 +191,8 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
         })
       );
       setVehicles(vehicleData);
+    } catch (error) {
+      setLoadError(getErrorMessage(error, 'Nao foi possivel carregar as despesas.'));
     } finally {
       setLoading(false);
     }
@@ -240,18 +247,29 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingExpense(null);
+    setSubmitError('');
     setFormData(defaultFormData());
+  };
+
+  const handleOpenCreate = () => {
+    setSubmitError('');
+    setSubmitSuccess('');
+    setEditingExpense(null);
+    setFormData(defaultFormData());
+    setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const selectedVehicle = vehicles.find((vehicle) => vehicle.id === formData.vehicleId);
     if (!selectedVehicle) {
-      window.alert('Selecione um veiculo cadastrado para registrar a despesa.');
+      setSubmitError('Selecione um veiculo cadastrado para registrar a despesa.');
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
+    setSubmitSuccess('');
     try {
       const payload = { ...formData, vehicleName: selectedVehicle.name };
       if (editingExpense) {
@@ -260,7 +278,10 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
         await expensesApi.create(payload);
       }
       await loadData();
+      setSubmitSuccess(editingExpense ? 'Despesa atualizada com sucesso.' : 'Despesa lancada com sucesso.');
       handleCloseModal();
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, 'Nao foi possivel salvar a despesa.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -281,13 +302,22 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
       status: expense.status,
       observations: expense.observations || '',
     });
+    setSubmitError('');
+    setSubmitSuccess('');
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja excluir esta despesa?')) return;
-    await expensesApi.remove(id);
-    await loadData();
+    setSubmitError('');
+    setSubmitSuccess('');
+    try {
+      await expensesApi.remove(id);
+      await loadData();
+      setSubmitSuccess('Despesa excluida com sucesso.');
+    } catch (error) {
+      setSubmitError(getErrorMessage(error, 'Nao foi possivel excluir a despesa.'));
+    }
   };
 
   const filteredExpenses = useMemo(() => (
@@ -317,13 +347,19 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
             <p className="text-on-secondary-container mt-1">Registre abastecimentos, manutencoes e custos operacionais por veiculo.</p>
           </div>
           {canCreate && (
-            <button onClick={() => setIsModalOpen(true)} className="bg-primary text-on-primary px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/10 hover:brightness-110 transition-all">
+            <button onClick={handleOpenCreate} className="bg-primary text-on-primary px-6 py-2.5 rounded-full font-semibold flex items-center gap-2 shadow-lg shadow-primary/10 hover:brightness-110 transition-all">
               <Plus className="w-4 h-4" />
               Nova Despesa
             </button>
           )}
         </div>
       </div>
+
+      {(submitSuccess || submitError || loadError) && (
+        <div className={`rounded-2xl border px-5 py-4 text-sm font-medium ${submitError || loadError ? 'border-error/20 bg-error/5 text-error' : 'border-primary/20 bg-primary/5 text-primary'}`}>
+          {submitError || loadError || submitSuccess}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <StatCard label="Despesas filtradas" value={totalAmount} icon={Wallet} variant="primary" currency />
@@ -444,6 +480,11 @@ export default function Expenses({ onNavigate }: ExpensesProps) {
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingExpense ? 'Editar Despesa' : 'Nova Despesa'}>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {submitError && (
+            <div className="rounded-2xl border border-error/20 bg-error/5 px-4 py-3 text-sm font-medium text-error">
+              {submitError}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input label="Data" type="date" value={formData.date} onChange={(value) => setFormData({ ...formData, date: value })} icon={Calendar} />
             <Input label="Hora" type="time" value={formData.time} onChange={(value) => setFormData({ ...formData, time: value })} icon={Clock} />

@@ -1,8 +1,9 @@
-import { ResourcePermissions } from './permissions';
+import type { ResourcePermissions } from './permissions.ts';
 
 type FieldMap = {
   api: string;
   db: string;
+  type?: 'number';
 };
 
 export type ResourceConfig = {
@@ -27,7 +28,7 @@ export const resources: Record<string, ResourceConfig> = {
       { api: 'plate', db: 'plate' },
       { api: 'driver', db: 'driver' },
       { api: 'type', db: 'type' },
-      { api: 'km', db: 'km' },
+      { api: 'km', db: 'km', type: 'number' },
       { api: 'nextMaintenance', db: 'next_maintenance' },
       { api: 'status', db: 'status' },
     ],
@@ -44,7 +45,7 @@ export const resources: Record<string, ResourceConfig> = {
     fields: [
       { api: 'name', db: 'name' },
       { api: 'type', db: 'type' },
-      { api: 'rating', db: 'rating' },
+      { api: 'rating', db: 'rating', type: 'number' },
       { api: 'status', db: 'status' },
       { api: 'contact', db: 'contact' },
       { api: 'email', db: 'email' },
@@ -92,8 +93,9 @@ export const resources: Record<string, ResourceConfig> = {
       { api: 'companyId', db: 'company_id' },
       { api: 'companyName', db: 'company_name' },
       { api: 'contractName', db: 'contract_name' },
-      { api: 'annualValue', db: 'annual_value' },
-      { api: 'monthlyValue', db: 'monthly_value' },
+      { api: 'remunerationType', db: 'remuneration_type' },
+      { api: 'annualValue', db: 'annual_value', type: 'number' },
+      { api: 'monthlyValue', db: 'monthly_value', type: 'number' },
       { api: 'startDate', db: 'start_date' },
       { api: 'endDate', db: 'end_date' },
       { api: 'status', db: 'status' },
@@ -116,7 +118,7 @@ export const resources: Record<string, ResourceConfig> = {
       { api: 'plate', db: 'plate' },
       { api: 'date', db: 'date' },
       { api: 'route', db: 'route' },
-      { api: 'amount', db: 'amount' },
+      { api: 'amount', db: 'amount', type: 'number' },
     ],
   },
   expenses: {
@@ -135,8 +137,8 @@ export const resources: Record<string, ResourceConfig> = {
       { api: 'vehicleName', db: 'vehicle_name' },
       { api: 'provider', db: 'provider' },
       { api: 'category', db: 'category' },
-      { api: 'quantity', db: 'quantity' },
-      { api: 'amount', db: 'amount' },
+      { api: 'quantity', db: 'quantity', type: 'number' },
+      { api: 'amount', db: 'amount', type: 'number' },
       { api: 'odometer', db: 'odometer' },
       { api: 'status', db: 'status' },
       { api: 'observations', db: 'observations' },

@@ -1,5 +1,5 @@
 import { auth, OperationType, handleDataError } from '../firebase';
-import { Company, Contract, Expense, Freight, PlatformTenant, Provider, TenantProfile, UserProfile, Vehicle } from '../types';
+import { Company, Contract, Expense, Freight, PlatformTenant, Provider, Revenue, TenantProfile, UserProfile, Vehicle } from '../types';
 
 type ResourceInput<T> = Omit<T, 'id'>;
 
@@ -69,7 +69,7 @@ export const usersApi = {
       handleDataError(error, OperationType.GET, '/api/me/profile');
     }
   },
-  create: (payload: { uid: string; email: string; role: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer'; name?: string }) =>
+  create: (payload: { email: string; password: string; role: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer'; name?: string }) =>
     apiRequest<UserProfile>('/api/users', { method: 'POST', body: JSON.stringify(payload) }, OperationType.CREATE),
 };
 
@@ -86,14 +86,24 @@ export const platformTenantsApi = {
     tradeName: string;
     slug: string;
     cnpj: string;
+    phone: string;
+    legalRepresentative: string;
     city: string;
     state: string;
     plan: string;
     status: 'active' | 'inactive' | 'suspended';
-    ownerUid: string;
     ownerEmail: string;
     ownerName: string;
+    ownerPassword: string;
   }) => apiRequest<PlatformTenant>('/api/platform/tenants', { method: 'POST', body: JSON.stringify(payload) }, OperationType.CREATE),
+};
+
+export const revenuesApi = {
+  list: () => apiRequest<Revenue[]>('/api/revenues', {}, OperationType.LIST),
+  generate: () => apiRequest<{ generated: number }>('/api/revenues/generate', { method: 'POST' }, OperationType.CREATE),
+  generateCharge: (id: string) => apiRequest<Revenue>(`/api/revenues/${id}/charge`, { method: 'POST' }, OperationType.UPDATE),
+  markReceived: (id: string) => apiRequest<Revenue>(`/api/revenues/${id}/receive`, { method: 'POST' }, OperationType.UPDATE),
+  markOverdue: (id: string) => apiRequest<Revenue>(`/api/revenues/${id}/overdue`, { method: 'POST' }, OperationType.UPDATE),
 };
 
 export const vehiclesApi = createCrudApi<Vehicle>('/api/vehicles');

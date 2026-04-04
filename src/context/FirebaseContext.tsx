@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useEffectEvent, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { createUserByAdmin, auth, logout, signInWithEmail } from '../firebase';
+import { auth, logout, signInWithEmail } from '../firebase';
 import { usersApi } from '../lib/api';
 import { UserProfile } from '../types';
 
@@ -10,7 +10,7 @@ interface FirebaseContextType {
   loading: boolean;
   isAuthReady: boolean;
   refreshProfile: () => Promise<void>;
-  signUp: (email: string, pass: string, role?: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer') => Promise<unknown>;
+  signUp: (email: string, pass: string, role?: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer', name?: string) => Promise<unknown>;
   signIn: (email: string, pass: string) => Promise<unknown>;
   logout: () => Promise<void>;
 }
@@ -61,26 +61,17 @@ export function FirebaseProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const normalizeEmail = (identifier: string) => {
-    if (identifier.includes('@')) return identifier;
-    return `${identifier.toLowerCase().trim()}@novalog.test`;
-  };
-
-  const signUp = async (identifier: string, pass: string, requestedRole?: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer') => {
-    const email = normalizeEmail(identifier);
-    const result = await createUserByAdmin(email, pass);
-    await usersApi.create({
-      uid: result.user.uid,
-      email: result.user.email || email,
+  const signUp = async (email: string, pass: string, requestedRole?: 'admin' | 'financial' | 'operational' | 'driver' | 'viewer', name?: string) => {
+    return usersApi.create({
+      email: email.trim().toLowerCase(),
+      password: pass,
       role: requestedRole || 'driver',
-      name: identifier.includes('@') ? identifier.split('@')[0] : identifier,
+      name: name?.trim() || undefined,
     });
-    return result;
   };
 
-  const signIn = async (identifier: string, pass: string) => {
-    const email = normalizeEmail(identifier);
-    return signInWithEmail(email, pass);
+  const signIn = async (email: string, pass: string) => {
+    return signInWithEmail(email.trim().toLowerCase(), pass);
   };
 
   return (

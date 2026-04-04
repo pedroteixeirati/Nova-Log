@@ -1,10 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Building2, Calendar, CheckCircle, FileText, Filter, Loader2, Route, TrendingDown, Truck, Wallet } from 'lucide-react';
-import { companiesApi, contractsApi, expensesApi, freightsApi, vehiclesApi } from '../lib/api';
+import { companiesApi, contractsApi, expensesApi, freightsApi, revenuesApi, vehiclesApi } from '../lib/api';
 import { cn } from '../lib/utils';
-import { Company, Contract, Expense, Freight, Vehicle } from '../types';
+import { Company, Contract, Expense, Freight, Revenue, Vehicle } from '../types';
 
 type ReportTab = 'financial' | 'operational' | 'managerial';
+
+function toDateInputValue(date: Date) {
+  return date.toISOString().split('T')[0];
+}
+
+function getCurrentMonthRange() {
+  const now = new Date();
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+  };
+}
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -69,14 +81,18 @@ export default function Reports() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [freights, setFreights] = useState<Freight[]>([]);
+  const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ReportTab>('financial');
   const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().split('T')[0];
+    const { start } = getCurrentMonthRange();
+    return toDateInputValue(start);
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const { end } = getCurrentMonthRange();
+    return toDateInputValue(end);
+  });
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
 
@@ -84,11 +100,12 @@ export default function Reports() {
     const loadReports = async () => {
       setLoading(true);
       try {
-        const [expenseData, vehicleData, contractData, freightData, companyData] = await Promise.all([
+        const [expenseData, vehicleData, contractData, freightData, revenueData, companyData] = await Promise.all([
           expensesApi.list(),
           vehiclesApi.list(),
           contractsApi.list(),
           freightsApi.list(),
+          revenuesApi.list(),
           companiesApi.list(),
         ]);
 
@@ -96,6 +113,7 @@ export default function Reports() {
         setVehicles(vehicleData);
         setContracts(contractData);
         setFreights(freightData);
+        setRevenues(revenueData);
         setCompanies(companyData);
       } finally {
         setLoading(false);
@@ -142,10 +160,41 @@ export default function Reports() {
     })
   ), [contracts, startDate, endDate, companyFilter, vehicleFilter]);
 
+  const filteredRevenues = useMemo(() => (
+    revenues.filter((revenue) => {
+      if (!isWithinDateRange(revenue.dueDate)) return false;
+      if (companyFilter !== 'all' && revenue.companyId !== companyFilter) return false;
+      if (vehicleFilter !== 'all' && revenue.sourceType === 'freight') {
+        const relatedFreight = freights.find((freight) => freight.id === revenue.freightId);
+        if (!relatedFreight || relatedFreight.vehicleId !== vehicleFilter) return false;
+      }
+      if (vehicleFilter !== 'all' && revenue.sourceType === 'contract') {
+        const relatedContract = contracts.find((contract) => contract.id === revenue.contractId);
+        if (!relatedContract || !(relatedContract.vehicleIds || []).includes(vehicleFilter)) return false;
+      }
+      return true;
+    })
+  ), [revenues, startDate, endDate, companyFilter, vehicleFilter, freights, contracts]);
+
   const totalExpenses = filteredExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalFreights = filteredFreights.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const totalMonthlyContracts = filteredContracts.reduce((sum, item) => sum + Number(item.monthlyValue || 0), 0);
-  const netResult = totalFreights + totalMonthlyContracts - totalExpenses;
+  const activeFinancialRevenues = filteredRevenues.filter((item) => item.status !== 'canceled');
+  const contractRevenue = activeFinancialRevenues
+    .filter((item) => item.sourceType === 'contract')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const freightRevenue = activeFinancialRevenues
+    .filter((item) => item.sourceType === 'freight')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const receivedRevenue = activeFinancialRevenues
+    .filter((item) => item.status === 'received')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const openRevenue = activeFinancialRevenues
+    .filter((item) => ['pending', 'billed', 'overdue'].includes(item.status))
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const overdueRevenue = activeFinancialRevenues
+    .filter((item) => item.status === 'overdue')
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const projectedRevenue = contractRevenue + freightRevenue;
+  const netResult = receivedRevenue - totalExpenses;
   const activeVehicles = vehicles.filter((vehicle) => vehicle.status === 'active').length;
   const maintenanceAlerts = vehicles.filter((vehicle) => vehicle.nextMaintenance && new Date(vehicle.nextMaintenance) < new Date()).length;
   const activeContracts = contracts.filter((contract) => contract.status === 'active').length;
@@ -280,18 +329,19 @@ export default function Reports() {
       {activeTab === 'financial' && (
         <div className="space-y-8">
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <MetricBox label="Fretes no periodo" value={`R$ ${totalFreights.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={Route} />
-            <MetricBox label="Repasse de contratos" value={`R$ ${totalMonthlyContracts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={FileText} />
-            <MetricBox label="Despesas no periodo" value={`R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={TrendingDown} />
-            <MetricBox label="Resultado liquido" value={`R$ ${netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={Wallet} highlight={netResult >= 0} />
+            <MetricBox label="Fretes faturados" value={`R$ ${freightRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={Route} />
+            <MetricBox label="Contratos faturados" value={`R$ ${contractRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={FileText} />
+            <MetricBox label="Recebido no periodo" value={`R$ ${receivedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={CheckCircle} />
+            <MetricBox label="Saldo realizado" value={`R$ ${netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={Wallet} highlight={netResult >= 0} />
           </section>
 
           <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Panel title="Composicao financeira">
               <div className="space-y-4">
-                <ProgressRow label="Fretes avulsos" value={totalFreights} total={Math.max(totalFreights + totalMonthlyContracts, 1)} />
-                <ProgressRow label="Contratos ativos no periodo" value={totalMonthlyContracts} total={Math.max(totalFreights + totalMonthlyContracts, 1)} />
-                <ProgressRow label="Despesas operacionais" value={totalExpenses} total={Math.max(totalFreights + totalMonthlyContracts, 1)} tone="danger" />
+                <ProgressRow label="Fretes avulsos" value={freightRevenue} total={Math.max(projectedRevenue, 1)} />
+                <ProgressRow label="Contratos recorrentes faturados" value={contractRevenue} total={Math.max(projectedRevenue, 1)} />
+                <ProgressRow label="Carteira em aberto" value={openRevenue} total={Math.max(projectedRevenue, 1)} />
+                <ProgressRow label="Despesas operacionais" value={totalExpenses} total={Math.max(projectedRevenue, 1)} tone="danger" />
               </div>
             </Panel>
             <Panel title="Rentabilidade por veiculo">
@@ -367,7 +417,7 @@ export default function Reports() {
             <MetricBox label="Empresas ativas" value={activeCompanies.toString()} icon={Building2} />
             <MetricBox label="Contratos ativos" value={activeContracts.toString()} icon={FileText} />
             <MetricBox label="Receita recorrente mensal" value={`R$ ${contracts.filter((item) => item.status === 'active').reduce((sum, item) => sum + Number(item.monthlyValue || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={Wallet} />
-            <MetricBox label="Resultado consolidado" value={`R$ ${netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={CheckCircle} highlight={netResult >= 0} />
+            <MetricBox label="Carteira em atraso" value={`R$ ${overdueRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} icon={CheckCircle} highlight={overdueRevenue === 0} />
           </section>
 
           <section className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -390,6 +440,7 @@ export default function Reports() {
               <div className="space-y-4 text-sm">
                 <ExecutiveRow label="Fretes avulsos no periodo" value={`${filteredFreights.length} viagem(ns)`} />
                 <ExecutiveRow label="Despesas registradas" value={`${filteredExpenses.length} lancamento(s)`} />
+                <ExecutiveRow label="Receitas em aberto" value={`R$ ${openRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} />
                 <ExecutiveRow label="Veiculo com melhor margem" value={vehiclePerformance[0]?.label || '-'} />
                 <ExecutiveRow label="Empresa com maior receita" value={companyPerformance[0]?.name || '-'} />
               </div>

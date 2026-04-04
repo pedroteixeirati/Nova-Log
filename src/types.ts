@@ -1,4 +1,4 @@
-export type NavItem = 'dashboard' | 'platformTenants' | 'tenantProfile' | 'expenses' | 'vehicles' | 'suppliers' | 'companies' | 'contracts' | 'freights' | 'reports' | 'settings' | 'support';
+export type NavItem = 'dashboard' | 'platformTenants' | 'tenantProfile' | 'revenues' | 'expenses' | 'vehicles' | 'suppliers' | 'companies' | 'contracts' | 'freights' | 'reports' | 'settings' | 'support';
 
 export interface Vehicle {
   id: string;
@@ -101,6 +101,10 @@ export interface TenantProfile {
   state: string;
   plan: string;
   status: 'active' | 'inactive' | 'suspended';
+  createdAt?: string;
+  updatedAt?: string;
+  createdByName?: string;
+  updatedByName?: string;
 }
 
 export interface PlatformTenant {
@@ -113,9 +117,35 @@ export interface PlatformTenant {
   state: string;
   plan: string;
   status: 'active' | 'inactive' | 'suspended';
+  phone?: string;
+  legalRepresentative?: string;
   ownerName: string;
   ownerEmail: string;
   ownerLinked: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  createdByName?: string;
+  updatedByName?: string;
+}
+
+export interface Revenue {
+  id: string;
+  companyId: string;
+  companyName: string;
+  contractId: string;
+  contractName: string;
+  freightId?: string;
+  competenceMonth: number;
+  competenceYear: number;
+  competenceLabel: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  status: 'pending' | 'billed' | 'received' | 'overdue' | 'canceled';
+  sourceType: 'contract' | 'freight' | 'manual';
+  chargeReference?: string;
+  chargeGeneratedAt?: string;
+  receivedAt?: string;
   createdAt: string;
 }
 
@@ -124,6 +154,7 @@ export interface Contract {
   companyId?: string;
   companyName: string;
   contractName: string;
+  remunerationType: 'recurring' | 'per_trip';
   annualValue: number;
   monthlyValue: number;
   startDate: string;

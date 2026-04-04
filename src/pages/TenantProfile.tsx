@@ -39,12 +39,30 @@ const emptyProfile: TenantProfile = {
 export default function TenantProfilePage() {
   const { userProfile, refreshProfile } = useFirebase();
   const canUpdate = canAccess(userProfile, 'tenantProfile', 'update');
+  const canManageBilling = userProfile?.role === 'dev';
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profile, setProfile] = useState<TenantProfile>(emptyProfile);
   const [draft, setDraft] = useState<TenantProfile>(emptyProfile);
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
 
   const isDirty = useMemo(() => JSON.stringify(profile) !== JSON.stringify(draft), [profile, draft]);
+  const validationMessage = useMemo(() => {
+    const normalizedCnpj = draft.cnpj.replace(/\D/g, '');
+    const normalizedPhone = draft.phone.replace(/\D/g, '');
+    const normalizedWhatsapp = draft.whatsapp.replace(/\D/g, '');
+
+    if (draft.name.trim().length < 3) return 'A razao social deve ter pelo menos 3 caracteres.';
+    if (normalizedCnpj && !isValidCnpj(normalizedCnpj)) return 'Informe um CNPJ valido.';
+    if (draft.email && !isValidEmail(draft.email)) return 'Informe um e-mail principal valido.';
+    if (draft.financialEmail && !isValidEmail(draft.financialEmail)) return 'Informe um e-mail financeiro valido.';
+    if (draft.fiscalEmail && !isValidEmail(draft.fiscalEmail)) return 'Informe um e-mail fiscal valido.';
+    if (normalizedPhone && normalizedPhone.length < 10) return 'Informe um telefone principal valido.';
+    if (normalizedWhatsapp && normalizedWhatsapp.length < 10) return 'Informe um WhatsApp valido.';
+    if (draft.state && !/^[A-Z]{2}$/.test(draft.state.trim().toUpperCase())) return 'A UF deve conter 2 letras.';
+    return '';
+  }, [draft]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -53,6 +71,7 @@ export default function TenantProfilePage() {
         const data = await tenantProfileApi.get();
         setProfile(data);
         setDraft(data);
+        setSubmitError('');
       } finally {
         setLoading(false);
       }
@@ -62,14 +81,22 @@ export default function TenantProfilePage() {
   }, []);
 
   const handleChange = (field: keyof TenantProfile, value: string) => {
+    setSubmitError('');
+    setSubmitSuccess('');
     setDraft((current) => ({ ...current, [field]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canUpdate) return;
+    if (validationMessage) {
+      setSubmitError(validationMessage);
+      return;
+    }
 
     setIsSubmitting(true);
+    setSubmitError('');
+    setSubmitSuccess('');
     try {
       const updated = await tenantProfileApi.update({
         name: draft.name,
@@ -103,6 +130,9 @@ export default function TenantProfilePage() {
       setProfile(updated);
       setDraft(updated);
       await refreshProfile();
+      setSubmitSuccess('Perfil da transportadora atualizado com sucesso.');
+    } catch (error: any) {
+      setSubmitError(extractErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -110,6 +140,8 @@ export default function TenantProfilePage() {
 
   const handleReset = () => {
     setDraft(profile);
+    setSubmitError('');
+    setSubmitSuccess('');
   };
 
   if (loading) {
@@ -133,6 +165,8 @@ export default function TenantProfilePage() {
             <p className="mt-2 max-w-3xl text-on-surface-variant">
               Gerencie os dados institucionais, fiscais e de localizacao da transportadora cliente que opera neste ambiente.
             </p>
+            {submitSuccess && <p className="mt-3 text-sm font-bold text-primary">{submitSuccess}</p>}
+            {!submitSuccess && submitError && <p className="mt-3 text-sm font-bold text-error">{submitError}</p>}
           </div>
         </div>
 
@@ -164,7 +198,7 @@ export default function TenantProfilePage() {
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
               <Field label="Razao social" value={draft.name} onChange={(value) => handleChange('name', value)} disabled={!canUpdate} />
               <Field label="Nome fantasia" value={draft.tradeName} onChange={(value) => handleChange('tradeName', value)} disabled={!canUpdate} />
-              <Field label="CNPJ" value={draft.cnpj} onChange={(value) => handleChange('cnpj', value)} disabled={!canUpdate} />
+              <Field label="CNPJ" value={draft.cnpj} onChange={(value) => handleChange('cnpj', formatCnpj(value))} disabled={!canUpdate} placeholder="00.000.000/0000-00" />
               <Field label="Inscricao estadual" value={draft.stateRegistration} onChange={(value) => handleChange('stateRegistration', value)} disabled={!canUpdate} />
               <Field label="Inscricao municipal" value={draft.municipalRegistration} onChange={(value) => handleChange('municipalRegistration', value)} disabled={!canUpdate} />
               <Field label="Regime tributario" value={draft.taxRegime} onChange={(value) => handleChange('taxRegime', value)} disabled={!canUpdate} />
@@ -181,11 +215,11 @@ export default function TenantProfilePage() {
           <section className="rounded-[2rem] border border-outline-variant bg-surface-container-lowest p-8 shadow-sm">
             <SectionTitle icon={ShieldCheck} title="Comunicacao e Digital" description="Canais oficiais usados na operacao, fiscal e financeiro." />
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-              <Field label="E-mail principal" type="email" value={draft.email} onChange={(value) => handleChange('email', value)} disabled={!canUpdate} />
-              <Field label="E-mail financeiro" type="email" value={draft.financialEmail} onChange={(value) => handleChange('financialEmail', value)} disabled={!canUpdate} />
-              <Field label="E-mail fiscal" type="email" value={draft.fiscalEmail} onChange={(value) => handleChange('fiscalEmail', value)} disabled={!canUpdate} />
-              <Field label="Telefone principal" value={draft.phone} onChange={(value) => handleChange('phone', value)} disabled={!canUpdate} />
-              <Field label="WhatsApp" value={draft.whatsapp} onChange={(value) => handleChange('whatsapp', value)} disabled={!canUpdate} />
+              <Field label="E-mail principal" type="email" value={draft.email} onChange={(value) => handleChange('email', value.trim().toLowerCase())} disabled={!canUpdate} />
+              <Field label="E-mail financeiro" type="email" value={draft.financialEmail} onChange={(value) => handleChange('financialEmail', value.trim().toLowerCase())} disabled={!canUpdate} />
+              <Field label="E-mail fiscal" type="email" value={draft.fiscalEmail} onChange={(value) => handleChange('fiscalEmail', value.trim().toLowerCase())} disabled={!canUpdate} />
+              <Field label="Telefone principal" value={draft.phone} onChange={(value) => handleChange('phone', formatPhone(value))} disabled={!canUpdate} placeholder="(11) 99999-9999" />
+              <Field label="WhatsApp" value={draft.whatsapp} onChange={(value) => handleChange('whatsapp', formatPhone(value))} disabled={!canUpdate} placeholder="(11) 99999-9999" />
               <Field label="Site institucional" value={draft.website} onChange={(value) => handleChange('website', value)} disabled={!canUpdate} />
             </div>
           </section>
@@ -204,7 +238,7 @@ export default function TenantProfilePage() {
               </div>
             </div>
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-              <Field label="CEP" value={draft.zipCode} onChange={(value) => handleChange('zipCode', value)} disabled={!canUpdate} />
+              <Field label="CEP" value={draft.zipCode} onChange={(value) => handleChange('zipCode', formatZipCode(value))} disabled={!canUpdate} placeholder="00000-000" />
               <Field label="Codigo IBGE" value={draft.ibgeCode} onChange={(value) => handleChange('ibgeCode', value)} disabled={!canUpdate} />
               <div className="md:col-span-2">
                 <Field label="Logradouro" value={draft.addressLine} onChange={(value) => handleChange('addressLine', value)} disabled={!canUpdate} />
@@ -215,26 +249,34 @@ export default function TenantProfilePage() {
                 <Field label="Bairro" value={draft.district} onChange={(value) => handleChange('district', value)} disabled={!canUpdate} />
               </div>
               <Field label="Cidade" value={draft.city} onChange={(value) => handleChange('city', value)} disabled={!canUpdate} />
-              <Field label="UF" value={draft.state} onChange={(value) => handleChange('state', value.toUpperCase())} disabled={!canUpdate} />
+              <Field label="UF" value={draft.state} onChange={(value) => handleChange('state', value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase())} disabled={!canUpdate} maxLength={2} placeholder="SP" />
             </div>
           </section>
 
           <section className="rounded-[2rem] border border-outline-variant bg-surface-container-lowest p-8 shadow-sm">
             <SectionTitle icon={ShieldCheck} title="Conta SaaS" description="Informacoes operacionais do tenant dentro da plataforma." />
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
-              <Field label="Plano" value={draft.plan} onChange={(value) => handleChange('plan', value)} disabled={!canUpdate} />
+              <Field label="Plano" value={draft.plan} onChange={(value) => handleChange('plan', value)} disabled={!canUpdate || !canManageBilling} />
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Status da conta</label>
                 <select
                   value={draft.status}
                   onChange={(event) => handleChange('status', event.target.value)}
-                  disabled={!canUpdate}
+                  disabled={!canUpdate || !canManageBilling}
                   className="w-full rounded-xl border border-outline-variant bg-surface-container px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="active">Ativa</option>
                   <option value="inactive">Inativa</option>
                   <option value="suspended">Suspensa</option>
                 </select>
+              </div>
+              <div className="rounded-2xl bg-surface-container p-4 md:col-span-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Auditoria</p>
+                <div className="mt-3 space-y-1 text-sm text-on-surface-variant">
+                  <p>Criado por: <span className="font-semibold text-on-surface">{draft.createdByName || 'Nao identificado'}</span></p>
+                  <p>Ultima atualizacao por: <span className="font-semibold text-on-surface">{draft.updatedByName || 'Nao identificado'}</span></p>
+                  {!canManageBilling && <p className="pt-2 text-xs">Plano e status da conta sao controlados pela JP Soft.</p>}
+                </div>
               </div>
             </div>
           </section>
@@ -273,12 +315,16 @@ function Field({
   onChange,
   disabled,
   type = 'text',
+  placeholder,
+  maxLength,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   type?: string;
+  placeholder?: string;
+  maxLength?: number;
 }) {
   return (
     <div className="space-y-2">
@@ -288,8 +334,65 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
+        placeholder={placeholder}
+        maxLength={maxLength}
         className="w-full rounded-xl border border-outline-variant bg-surface-container px-4 py-3 outline-none transition-all focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
       />
     </div>
   );
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidCnpj(cnpj: string) {
+  if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+  const calc = (base: string, factors: number[]) => {
+    const total = base.split('').reduce((sum, digit, index) => sum + Number(digit) * factors[index], 0);
+    const remainder = total % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const first = calc(cnpj.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const second = calc(cnpj.slice(0, 12) + String(first), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return cnpj === `${cnpj.slice(0, 12)}${first}${second}`;
+}
+
+function formatCnpj(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2');
+}
+
+function formatPhone(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function formatZipCode(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return digits.replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function extractErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    try {
+      const parsed = JSON.parse(error.message) as { error?: string };
+      if (parsed?.error) return parsed.error;
+    } catch {
+      return error.message;
+    }
+    return error.message;
+  }
+  return 'Nao foi possivel atualizar o perfil da transportadora.';
 }

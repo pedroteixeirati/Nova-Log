@@ -1,7 +1,7 @@
 import { UserProfile } from '../types';
 
 type Role = UserProfile['role'];
-type Section = 'platformTenants' | 'tenantProfile' | 'vehicles' | 'providers' | 'companies' | 'contracts' | 'freights' | 'expenses' | 'reports' | 'settings' | 'users';
+type Section = 'platformTenants' | 'tenantProfile' | 'revenues' | 'vehicles' | 'providers' | 'companies' | 'contracts' | 'freights' | 'expenses' | 'reports' | 'settings' | 'users';
 type Action = 'read' | 'create' | 'update' | 'delete';
 
 const sectionPermissions: Record<Section, Record<Action, Role[]>> = {
@@ -15,6 +15,12 @@ const sectionPermissions: Record<Section, Record<Action, Role[]>> = {
     read: ['dev', 'owner', 'admin'],
     create: [],
     update: ['dev', 'owner', 'admin'],
+    delete: [],
+  },
+  revenues: {
+    read: ['dev', 'owner', 'admin', 'financial'],
+    create: ['dev', 'owner', 'admin', 'financial'],
+    update: [],
     delete: [],
   },
   vehicles: {
