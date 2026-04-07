@@ -104,6 +104,7 @@ interface ReportsLayoutProps {
   onVehicleFilterChange: (value: string) => void;
   companyFilter: string;
   onCompanyFilterChange: (value: string) => void;
+  onResetFilters: () => void;
   vehicles: Vehicle[];
   companies: Company[];
   loading: boolean;
@@ -125,6 +126,7 @@ export default function ReportsLayout(props: ReportsLayoutProps) {
     onVehicleFilterChange,
     companyFilter,
     onCompanyFilterChange,
+    onResetFilters,
     vehicles,
     companies,
     loading,
@@ -133,6 +135,8 @@ export default function ReportsLayout(props: ReportsLayoutProps) {
     onRefresh,
     children,
   } = props;
+
+  const activeTabMeta = REPORT_TABS.find((tab) => tab.id === activeTab);
 
   if (loading) {
     return (
@@ -170,20 +174,31 @@ export default function ReportsLayout(props: ReportsLayoutProps) {
           </div>
         )}
 
-        <div className="flex flex-col xl:flex-row gap-4">
-          {REPORT_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={cn(
-                'flex-1 rounded-3xl border p-5 text-left transition-all',
-                activeTab === tab.id ? 'bg-primary text-on-primary border-primary shadow-lg shadow-primary/20' : 'bg-surface-container-lowest border-outline-variant hover:border-primary/40'
-              )}
-            >
-              <p className="font-black text-lg">{tab.label}</p>
-              <p className={cn('text-sm mt-1', activeTab === tab.id ? 'text-on-primary/80' : 'text-on-surface-variant')}>{tab.description}</p>
-            </button>
-          ))}
+        <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Visao ativa</p>
+              <p className="mt-2 text-xl font-black text-on-surface">{activeTabMeta?.label}</p>
+              <p className="mt-1 text-sm text-on-surface-variant">{activeTabMeta?.description}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {REPORT_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => onTabChange(tab.id)}
+                  className={cn(
+                    'rounded-full border px-4 py-2 text-sm font-bold transition-all',
+                    activeTab === tab.id
+                      ? 'border-primary bg-primary text-on-primary shadow-lg shadow-primary/15'
+                      : 'border-outline-variant bg-surface text-on-surface-variant hover:border-primary/40 hover:text-on-surface'
+                  )}
+                >
+                  {tab.label.replace('Relatorio ', '')}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -210,6 +225,16 @@ export default function ReportsLayout(props: ReportsLayoutProps) {
           </select>
         </div>
       </section>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onResetFilters}
+          className="rounded-full border border-outline-variant bg-surface-container-lowest px-4 py-2 text-sm font-bold text-on-surface-variant transition hover:border-primary/40 hover:text-on-surface"
+        >
+          Limpar filtros
+        </button>
+      </div>
 
       {children}
     </div>
