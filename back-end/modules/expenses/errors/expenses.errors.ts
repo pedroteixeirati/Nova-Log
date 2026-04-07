@@ -10,5 +10,12 @@ export const expenseErrors = {
   invalidQuantity: () => new AppError('A quantidade da despesa deve ser um numero valido.'),
   invalidOdometer: () => new AppError('O odometro da despesa deve ser um numero valido.'),
   invalidStatus: () => new AppError('Status da despesa invalido.'),
+  invalidFinancialStatus: () => new AppError('Status financeiro do custo operacional invalido.'),
+  invalidDueDate: () => new AppError('Informe um vencimento valido para o custo operacional.'),
+  invalidPaidAt: () => new AppError('Informe uma data de pagamento valida para o custo operacional.'),
+  invalidLinkedPayable: () => new AppError('O vinculo financeiro informado para o custo operacional e invalido.'),
+  invalidContract: () => new AppError('O contrato informado para o custo operacional e invalido.'),
+  invalidFreight: () => new AppError('O frete informado para o custo operacional e invalido.'),
+  invalidReceiptUrl: () => new AppError('Informe uma URL valida para o comprovante do custo operacional.'),
   vehicleNotFound: () => new AppError('O veiculo informado nao pertence a este tenant.'),
 };

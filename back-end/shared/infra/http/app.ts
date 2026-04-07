@@ -4,6 +4,7 @@ import authRouter from '../../../modules/auth/controllers/auth.controller';
 import contractsRouter from '../../../modules/contracts/controllers/contracts.controller';
 import expensesRouter from '../../../modules/expenses/controllers/expenses.controller';
 import freightsRouter from '../../../modules/freights/controllers/freights.controller';
+import payablesRouter from '../../../modules/payables/controllers/payables.controller';
 import revenuesRouter from '../../../modules/revenues/controllers/revenues.controller';
 import resourcesRouter from '../../../modules/resources/controllers/resources.controller';
 import { errorHandler } from '../../http/error-handler';
@@ -24,6 +25,7 @@ app.use('/api', usersRouter);
 app.use('/api', contractsRouter);
 app.use('/api', freightsRouter);
 app.use('/api', expensesRouter);
+app.use('/api', payablesRouter);
 app.use('/api/revenues', revenuesRouter);
 app.use('/api', resourcesRouter);
 

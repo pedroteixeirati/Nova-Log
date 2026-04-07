@@ -1,5 +1,7 @@
 import type { AuthContext } from '../../auth/dtos/auth-context';
+import type { ExpenseSeed } from '../../expenses/dtos/expense.types';
 import type { FreightRevenueSeedRow } from '../../revenues/dtos/revenue.types';
+import { removeExpensePayable, syncExpensePayable } from '../../payables/services/payables.service';
 import { syncFreightRevenue } from '../../revenues/services/revenues.service';
 import { resources, type ResourceConfig } from '../../../shared/resources/resources';
 import { validateSimpleResourcePayload } from './resource-payload.service';
@@ -75,6 +77,37 @@ async function syncFreightIfNeeded(resourceName: string, row: Record<string, unk
   }, userId);
 }
 
+async function syncExpenseIfNeeded(resourceName: string, row: Record<string, unknown>, userId?: string, tenantId?: string) {
+  if (resourceName !== 'expenses') {
+    return;
+  }
+
+  await syncExpensePayable({
+    id: row.id as string,
+    displayId: row.displayId as number | undefined,
+    date: String(row.date || ''),
+    time: String(row.time || ''),
+    costDate: String(row.costDate || row.date || ''),
+    vehicleId: String(row.vehicleId || ''),
+    vehicleName: String(row.vehicleName || ''),
+    provider: String(row.provider || ''),
+    category: String(row.category || ''),
+    quantity: String(row.quantity || ''),
+    amount: Number(row.amount || 0),
+    odometer: String(row.odometer || ''),
+    status: (row.status as ExpenseSeed['status']) || 'pending',
+    paymentRequired: Boolean(row.paymentRequired),
+    financialStatus: (row.financialStatus as ExpenseSeed['financialStatus']) || 'none',
+    dueDate: String(row.dueDate || ''),
+    paidAt: String(row.paidAt || ''),
+    linkedPayableId: (row.linkedPayableId as string | null) || null,
+    contractId: (row.contractId as string | null) || null,
+    freightId: (row.freightId as string | null) || null,
+    receiptUrl: String(row.receiptUrl || ''),
+    observations: String(row.observations || ''),
+  }, tenantId, userId);
+}
+
 export async function createResource(resourceName: string, auth: AuthContext | undefined, body: Record<string, unknown>) {
   const resource = getResourceConfig(resourceName);
   if (!resource) {
@@ -111,7 +144,11 @@ export async function createResourceByConfig(
   }
 
   await syncFreightIfNeeded(resourceName, row, auth?.userId, auth?.tenantId);
-  return mapRow(row, resource.fields);
+  const mapped = mapRow(row, resource.fields);
+  await syncExpenseIfNeeded(resourceName, mapped, auth?.userId, auth?.tenantId);
+  return resourceName === 'expenses'
+    ? await getUpdatedExpenseResource(resource, auth?.tenantId, mapped.id as string, mapped)
+    : mapped;
 }
 
 export async function updateResourceByConfig(
@@ -128,7 +165,22 @@ export async function updateResourceByConfig(
   }
 
   await syncFreightIfNeeded(resourceName, row, auth?.userId, auth?.tenantId);
-  return mapRow(row, resource.fields);
+  const mapped = mapRow(row, resource.fields);
+  await syncExpenseIfNeeded(resourceName, mapped, auth?.userId, auth?.tenantId);
+  return resourceName === 'expenses'
+    ? await getUpdatedExpenseResource(resource, auth?.tenantId, mapped.id as string, mapped)
+    : mapped;
+}
+
+async function getUpdatedExpenseResource(
+  resource: ResourceConfig,
+  tenantId: string | undefined,
+  id: string,
+  fallback: Record<string, unknown>
+) {
+  const rows = await listResourceRows(resource, tenantId);
+  const fresh = rows.find((row) => row.id === id);
+  return fresh ? mapRow(fresh, resource.fields) : fallback;
 }
 
 export async function removeResource(resourceName: string, auth: AuthContext | undefined, id: string) {
@@ -148,6 +200,9 @@ export async function removeResourceByConfig(
 ) {
   if (resourceName === 'freights') {
     await deleteFreightRevenueLink(id, auth?.tenantId);
+  }
+  if (resourceName === 'expenses') {
+    await removeExpensePayable(id, auth?.tenantId);
   }
 
   const deleted = await deleteResourceRow(resource, id, auth?.tenantId);
