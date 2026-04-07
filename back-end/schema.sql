@@ -207,6 +207,7 @@ create table if not exists expenses (
   tenant_id uuid not null references tenants(id) on delete cascade,
   date text not null,
   time text not null,
+  cost_date text,
   vehicle_id text not null,
   vehicle_name text not null,
   provider text not null,
@@ -215,6 +216,14 @@ create table if not exists expenses (
   amount numeric not null default 0,
   odometer text not null,
   status text not null check (status in ('approved', 'review', 'pending')),
+  payment_required boolean not null default false,
+  financial_status text not null default 'none' check (financial_status in ('none', 'open', 'paid', 'overdue', 'canceled')),
+  due_date text,
+  paid_at text,
+  linked_payable_id uuid,
+  contract_id uuid references contracts(id) on delete set null,
+  freight_id uuid references freights(id) on delete set null,
+  receipt_url text,
   observations text not null,
   created_by_user_id uuid references users(id) on delete set null,
   updated_by_user_id uuid references users(id) on delete set null,
@@ -247,6 +256,30 @@ create table if not exists revenues (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (tenant_id, contract_id, competence_month, competence_year)
+);
+
+create table if not exists payables (
+  id uuid primary key default gen_random_uuid(),
+  display_id bigint,
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  source_type text not null default 'manual' check (source_type in ('expense', 'manual')),
+  source_id uuid,
+  description text not null,
+  provider_name text,
+  vehicle_id uuid references vehicles(id) on delete set null,
+  vehicle_name text,
+  contract_id uuid references contracts(id) on delete set null,
+  amount numeric not null default 0,
+  due_date text not null,
+  status text not null default 'open' check (status in ('open', 'paid', 'overdue', 'canceled')),
+  paid_at text,
+  payment_method text,
+  proof_url text,
+  notes text,
+  created_by_user_id uuid references users(id) on delete set null,
+  updated_by_user_id uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 alter table if exists revenues add column if not exists charge_reference text;
@@ -306,13 +339,60 @@ alter table if exists freights
 alter table if exists freights drop column if exists owner_uid;
 alter table if exists expenses add column if not exists tenant_id uuid references tenants(id) on delete cascade;
 alter table if exists expenses add column if not exists display_id bigint;
+alter table if exists expenses add column if not exists cost_date text;
+alter table if exists expenses add column if not exists payment_required boolean not null default false;
+alter table if exists expenses add column if not exists financial_status text not null default 'none';
+alter table if exists expenses add column if not exists due_date text;
+alter table if exists expenses add column if not exists paid_at text;
+alter table if exists expenses add column if not exists linked_payable_id uuid;
+alter table if exists expenses add column if not exists contract_id uuid references contracts(id) on delete set null;
+alter table if exists expenses add column if not exists freight_id uuid references freights(id) on delete set null;
+alter table if exists expenses add column if not exists receipt_url text;
 alter table if exists expenses add column if not exists created_by_user_id uuid references users(id) on delete set null;
 alter table if exists expenses add column if not exists updated_by_user_id uuid references users(id) on delete set null;
+update expenses set cost_date = date where cost_date is null;
+update expenses set financial_status = 'none' where financial_status is null;
+alter table if exists expenses drop constraint if exists expenses_financial_status_check;
+alter table if exists expenses
+  add constraint expenses_financial_status_check
+  check (financial_status in ('none', 'open', 'paid', 'overdue', 'canceled'));
 alter table if exists expenses drop column if exists owner_uid;
 alter table if exists revenues add column if not exists tenant_id uuid references tenants(id) on delete cascade;
 alter table if exists revenues add column if not exists display_id bigint;
 alter table if exists revenues add column if not exists created_by_user_id uuid references users(id) on delete set null;
 alter table if exists revenues add column if not exists updated_by_user_id uuid references users(id) on delete set null;
+alter table if exists payables add column if not exists display_id bigint;
+alter table if exists payables add column if not exists tenant_id uuid references tenants(id) on delete cascade;
+alter table if exists payables add column if not exists source_type text not null default 'manual';
+alter table if exists payables add column if not exists source_id uuid;
+alter table if exists payables add column if not exists description text;
+alter table if exists payables add column if not exists provider_name text;
+alter table if exists payables add column if not exists vehicle_id uuid references vehicles(id) on delete set null;
+alter table if exists payables add column if not exists vehicle_name text;
+alter table if exists payables add column if not exists contract_id uuid references contracts(id) on delete set null;
+alter table if exists payables add column if not exists amount numeric not null default 0;
+alter table if exists payables add column if not exists due_date text;
+alter table if exists payables add column if not exists status text not null default 'open';
+alter table if exists payables add column if not exists paid_at text;
+alter table if exists payables add column if not exists payment_method text;
+alter table if exists payables add column if not exists proof_url text;
+alter table if exists payables add column if not exists notes text;
+alter table if exists payables add column if not exists created_by_user_id uuid references users(id) on delete set null;
+alter table if exists payables add column if not exists updated_by_user_id uuid references users(id) on delete set null;
+update payables set source_type = 'manual' where source_type is null;
+update payables set status = 'open' where status is null;
+alter table if exists payables drop constraint if exists payables_source_type_check;
+alter table if exists payables
+  add constraint payables_source_type_check
+  check (source_type in ('expense', 'manual'));
+alter table if exists payables drop constraint if exists payables_status_check;
+alter table if exists payables
+  add constraint payables_status_check
+  check (status in ('open', 'paid', 'overdue', 'canceled'));
+alter table if exists expenses drop constraint if exists expenses_linked_payable_id_fkey;
+alter table if exists expenses
+  add constraint expenses_linked_payable_id_fkey
+  foreign key (linked_payable_id) references payables(id) on delete set null;
 alter table if exists tenant_users add column if not exists display_id bigint;
 
 create or replace function assign_global_display_id()
@@ -458,6 +538,16 @@ set display_id = numbered.next_display_id
 from numbered
 where r.id = numbered.id;
 
+with numbered as (
+  select id, row_number() over (partition by tenant_id order by created_at asc, id asc) as next_display_id
+  from payables
+  where display_id is null
+)
+update payables p
+set display_id = numbered.next_display_id
+from numbered
+where p.id = numbered.id;
+
 drop trigger if exists trg_tenants_display_id on tenants;
 create trigger trg_tenants_display_id
 before insert on tenants
@@ -518,6 +608,12 @@ before insert on revenues
 for each row
 execute function assign_tenant_display_id();
 
+drop trigger if exists trg_payables_display_id on payables;
+create trigger trg_payables_display_id
+before insert on payables
+for each row
+execute function assign_tenant_display_id();
+
 create index if not exists idx_tenant_users_tenant_id on tenant_users(tenant_id);
 create index if not exists idx_tenant_users_user_id on tenant_users(user_id);
 create unique index if not exists idx_tenants_display_id on tenants(display_id) where display_id is not null;
@@ -546,3 +642,8 @@ create unique index if not exists idx_expenses_tenant_display_id on expenses(ten
 create index if not exists idx_expenses_tenant_id on expenses(tenant_id);
 create unique index if not exists idx_revenues_tenant_display_id on revenues(tenant_id, display_id) where display_id is not null;
 create index if not exists idx_revenues_tenant_id on revenues(tenant_id);
+create unique index if not exists idx_payables_tenant_display_id on payables(tenant_id, display_id) where display_id is not null;
+create index if not exists idx_payables_tenant_id on payables(tenant_id);
+create index if not exists idx_payables_tenant_status on payables(tenant_id, status);
+create index if not exists idx_payables_tenant_due_date on payables(tenant_id, due_date);
+create index if not exists idx_payables_source on payables(tenant_id, source_type, source_id);
