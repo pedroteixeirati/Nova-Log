@@ -1,13 +1,30 @@
 import React from 'react';
 import { FileText, Route, Wallet } from 'lucide-react';
 import { useReportsData } from './useReportsData';
-import { EmptyText, ExecutiveRow, MetricBox, Panel, ProgressRow } from './ReportsSharedComponents';
+import { EmptyText, ExecutiveRow, MetricBox, Panel, ProgressRow, ReportsEmptyState } from './ReportsSharedComponents';
 
 type ReportsFinancialProps = {
   data: ReturnType<typeof useReportsData>;
 };
 
 export default function ReportsFinancial({ data }: ReportsFinancialProps) {
+  const hasFinancialData =
+    data.filteredExpenses.length > 0 ||
+    data.activePayables.length > 0 ||
+    data.contractRevenue > 0 ||
+    data.freightRevenue > 0 ||
+    data.receivedRevenue > 0 ||
+    data.openRevenue > 0;
+
+  if (!hasFinancialData) {
+    return (
+      <ReportsEmptyState
+        title="Nenhuma movimentacao financeira encontrada"
+        description="Ajuste os filtros ou registre contas a receber, custos operacionais e contas a pagar para visualizar a leitura financeira deste periodo."
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">

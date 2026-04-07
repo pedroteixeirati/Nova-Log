@@ -1,13 +1,22 @@
 import React from 'react';
 import { Filter, Route, Truck } from 'lucide-react';
 import { useReportsData } from './useReportsData';
-import { EmptyText, MapMarkerIcon, MetricBox, Panel } from './ReportsSharedComponents';
+import { EmptyText, MapMarkerIcon, MetricBox, Panel, ReportsEmptyState } from './ReportsSharedComponents';
 
 type ReportsOperationalProps = {
   data: ReturnType<typeof useReportsData>;
 };
 
 export default function ReportsOperational({ data }: ReportsOperationalProps) {
+  if (data.filteredFreights.length === 0) {
+    return (
+      <ReportsEmptyState
+        title="Nenhuma viagem encontrada no periodo"
+        description="Quando houver fretes dentro do intervalo filtrado, esta visao mostrara uso da frota, rotas mais frequentes e indicadores operacionais."
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">

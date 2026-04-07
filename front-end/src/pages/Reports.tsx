@@ -33,6 +33,7 @@ export default function Reports() {
       onVehicleFilterChange={data.setVehicleFilter}
       companyFilter={data.companyFilter}
       onCompanyFilterChange={data.setCompanyFilter}
+      onResetFilters={data.resetFilters}
       vehicles={data.vehicles}
       companies={data.companies}
       loading={data.loading}

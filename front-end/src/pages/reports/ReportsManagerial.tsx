@@ -1,13 +1,22 @@
 import React from 'react';
 import { Building2, CheckCircle, FileText, Wallet } from 'lucide-react';
 import { useReportsData } from './useReportsData';
-import { EmptyText, ExecutiveRow, MetricBox, Panel } from './ReportsSharedComponents';
+import { EmptyText, ExecutiveRow, MetricBox, Panel, ReportsEmptyState } from './ReportsSharedComponents';
 
 type ReportsManagerialProps = {
   data: ReturnType<typeof useReportsData>;
 };
 
 export default function ReportsManagerial({ data }: ReportsManagerialProps) {
+  if (data.filteredContracts.length === 0 && data.companyPerformance.length === 0) {
+    return (
+      <ReportsEmptyState
+        title="Ainda nao ha dados gerenciais suficientes"
+        description="Cadastre contratos e relacione empresas ao periodo filtrado para destravar esta visao consolidada da transportadora."
+      />
+    );
+  }
+
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">

@@ -58,3 +58,18 @@ export function MapMarkerIcon(props: React.ComponentProps<'svg'>) {
     </svg>
   );
 }
+
+export function ReportsEmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <section className="rounded-3xl border border-dashed border-outline-variant bg-surface-container-lowest px-8 py-12 text-center">
+      <p className="text-xl font-black text-on-surface">{title}</p>
+      <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-on-surface-variant">{description}</p>
+    </section>
+  );
+}
