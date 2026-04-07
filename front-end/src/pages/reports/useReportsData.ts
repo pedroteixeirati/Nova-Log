@@ -4,6 +4,7 @@ import { Company, Contract, Expense, Freight, Payable, Revenue, Vehicle } from '
 import { getCurrentMonthRange, parseLocalDate, ReportTab, toDateInputValue } from './reports.shared';
 
 export function useReportsData() {
+  const defaultRange = getCurrentMonthRange();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [payables, setPayables] = useState<Payable[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -15,14 +16,8 @@ export function useReportsData() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState<ReportTab>('financial');
-  const [startDate, setStartDate] = useState(() => {
-    const { start } = getCurrentMonthRange();
-    return toDateInputValue(start);
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const { end } = getCurrentMonthRange();
-    return toDateInputValue(end);
-  });
+  const [startDate, setStartDate] = useState(() => toDateInputValue(defaultRange.start));
+  const [endDate, setEndDate] = useState(() => toDateInputValue(defaultRange.end));
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
 
@@ -197,10 +192,17 @@ export function useReportsData() {
     }).filter((item) => item.contracts > 0).sort((a, b) => b.monthlyRevenue - a.monthlyRevenue)
   ), [companies, filteredContracts]);
 
+  const resetFilters = () => {
+    setStartDate(toDateInputValue(defaultRange.start));
+    setEndDate(toDateInputValue(defaultRange.end));
+    setVehicleFilter('all');
+    setCompanyFilter('all');
+  };
+
   return {
     activeTab, setActiveTab, startDate, setStartDate, endDate, setEndDate, vehicleFilter, setVehicleFilter, companyFilter, setCompanyFilter,
-    loading, refreshing, loadError, loadReports, vehicles, companies, contracts,
-    filteredExpenses, filteredFreights, totalOperationalCosts, activePayables, paidPayables, openPayables, overduePayables,
+    loading, refreshing, loadError, loadReports, resetFilters, vehicles, companies, contracts,
+    filteredExpenses, filteredFreights, filteredContracts, totalOperationalCosts, activePayables, paidPayables, openPayables, overduePayables,
     contractRevenue, freightRevenue, receivedRevenue, openRevenue, projectedRevenue, netResult, activeVehicles, maintenanceAlerts,
     activeContracts, activeCompanies, routeRanking, vehiclePerformance, companyPerformance,
   };
