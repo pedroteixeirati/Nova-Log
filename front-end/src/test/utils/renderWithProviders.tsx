@@ -1,9 +1,8 @@
 import React from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react';
 import { MemoryRouter, MemoryRouterProps } from 'react-router-dom';
 import { FirebaseProvider } from '../../context/FirebaseContext';
-import { createAppQueryClient } from '../../shared/lib/query-client';
 
 interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   routerProps?: MemoryRouterProps;
@@ -13,7 +12,16 @@ export function renderWithProviders(ui: React.ReactElement, options: ExtendedRen
   const { routerProps, ...renderOptions } = options;
 
   function Wrapper({ children }: { children: React.ReactNode }) {
-    const queryClient = createAppQueryClient();
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+        mutations: {
+          retry: false,
+        },
+      },
+    });
 
     return (
       <MemoryRouter {...routerProps}>
