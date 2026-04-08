@@ -1,0 +1,36 @@
+export interface TenantProfile {
+  id: string;
+  displayId?: number;
+  name: string;
+  tradeName: string;
+  slug: string;
+  cnpj: string;
+  stateRegistration: string;
+  municipalRegistration: string;
+  taxRegime: string;
+  mainCnae: string;
+  secondaryCnaes: string;
+  openedAt: string;
+  legalRepresentative: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  financialEmail: string;
+  fiscalEmail: string;
+  website: string;
+  logoUrl: string;
+  zipCode: string;
+  ibgeCode: string;
+  addressLine: string;
+  addressNumber: string;
+  addressComplement: string;
+  district: string;
+  city: string;
+  state: string;
+  plan: string;
+  status: 'active' | 'inactive' | 'suspended';
+  createdAt?: string;
+  updatedAt?: string;
+  createdByName?: string;
+  updatedByName?: string;
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Search, Bell, ChevronDown, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { NavItem } from '../types';
-import { useFirebase } from '../context/FirebaseContext';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import { logout } from '../firebase';
 import { canAccess } from '../lib/permissions';
 
@@ -10,7 +10,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ onNavigate }: TopBarProps) {
-  const { user, userProfile } = useFirebase();
+  const { user, userProfile } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const canOpenSettings = canAccess(userProfile, 'settings', 'read');
