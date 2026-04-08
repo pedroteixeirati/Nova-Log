@@ -14,3 +14,5 @@ export function useAuth() {
     logout: auth.logout,
   };
 }
+
+export default useAuth;
