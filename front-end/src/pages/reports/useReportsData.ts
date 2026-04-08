@@ -169,7 +169,7 @@ export function useReportsData() {
       return acc;
     }, {} as Record<string, { route: string; trips: number }>);
 
-    return Object.values(grouped)
+    return (Object.values(grouped) as Array<{ route: string; trips: number }>)
       .sort((a, b) => b.trips - a.trips || a.route.localeCompare(b.route, 'pt-BR'))
       .slice(0, 5);
   }, [filteredFreights]);

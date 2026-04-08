@@ -1,0 +1,12 @@
+export interface Freight {
+  id: string;
+  displayId?: number;
+  vehicleId: string;
+  plate: string;
+  contractId?: string;
+  contractName?: string;
+  billingType?: 'standalone' | 'contract_recurring' | 'contract_per_trip';
+  date: string;
+  route: string;
+  amount: number;
+}
