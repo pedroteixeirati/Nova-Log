@@ -12,7 +12,7 @@ import {
   startOfMonth,
 } from '../../../modules/revenues/services/revenues-domain.ts';
 
-const appSource = readFileSync(resolve(process.cwd(), 'back-end/app.ts'), 'utf8');
+const appSource = readFileSync(resolve(process.cwd(), 'back-end/shared/infra/http/app.ts'), 'utf8');
 const freightsServiceSource = readFileSync(resolve(process.cwd(), 'back-end/modules/freights/services/freights.service.ts'), 'utf8');
 const revenuesServiceSource = readFileSync(resolve(process.cwd(), 'back-end/modules/revenues/services/revenues.service.ts'), 'utf8');
 const revenuesRepositorySource = readFileSync(resolve(process.cwd(), 'back-end/modules/revenues/repositories/revenues.repository.ts'), 'utf8');
