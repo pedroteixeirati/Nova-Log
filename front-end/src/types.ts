@@ -6,6 +6,7 @@ export type { Company } from './features/companies/types/company.types';
 export type { Payable } from './features/payables/types/payable.types';
 export type { Contract } from './features/contracts/types/contract.types';
 export type { Freight } from './features/freights/types/freight.types';
+export type { Cargo } from './features/cargas/types/cargo.types';
 export type { Revenue } from './features/revenues/types/revenue.types';
 export type { TenantProfile } from './features/tenant-profile/types/tenant-profile.types';
 export type { PlatformTenant } from './features/platform-tenants/types/platform-tenant.types';

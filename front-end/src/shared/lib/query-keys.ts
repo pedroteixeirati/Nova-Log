@@ -19,4 +19,9 @@ export const queryKeys = {
     all: ['companies'] as const,
     list: () => ['companies', 'list'] as const,
   },
+  cargas: {
+    all: ['cargas'] as const,
+    list: () => ['cargas', 'list'] as const,
+    freight: (freightId: string) => ['cargas', 'freight', freightId] as const,
+  },
 } as const;

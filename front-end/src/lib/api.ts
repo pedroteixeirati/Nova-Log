@@ -8,4 +8,5 @@ export { providersApi } from '../features/providers/services/providers.api';
 export { companiesApi } from '../features/companies/services/companies.api';
 export { contractsApi } from '../features/contracts/services/contracts.api';
 export { freightsApi } from '../features/freights/services/freights.api';
+export { cargasApi } from '../features/cargas/services/cargas.api';
 export { expensesApi } from '../features/expenses/services/expenses.api';

@@ -8,6 +8,7 @@ import {
   Building2,
   FileText,
   Route,
+  Package,
   BarChart3,
   Settings,
   ChevronDown,
@@ -57,6 +58,7 @@ export default function Sidebar({ activeItem, onNavigate }: SidebarProps) {
       icon: BriefcaseBusiness,
       items: [
         { id: 'freights', label: 'Fretes', icon: Route, allowed: canAccess(userProfile, 'freights', 'read') },
+        { id: 'cargas', label: 'Cargas', icon: Package, allowed: canAccess(userProfile, 'cargas', 'read') },
         { id: 'contracts', label: 'Contratos', icon: FileText, allowed: canAccess(userProfile, 'contracts', 'read') },
         { id: 'expenses', label: 'Custos operacionais', icon: CreditCard, allowed: canAccess(userProfile, 'expenses', 'read') },
       ],
