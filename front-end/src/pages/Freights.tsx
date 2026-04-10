@@ -1,14 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Edit2, Filter, Loader2, MapPinned, Plus, Route, Search, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarDays, Edit2, Filter, Loader2, MapPinned, PackagePlus, Route, Search, Trash2 } from 'lucide-react';
 import CustomSelect from '../components/CustomSelect';
 import KpiCard from '../components/KpiCard';
 import Modal from '../components/Modal';
 import { useFirebase } from '../context/FirebaseContext';
-import { contractsApi, freightsApi, vehiclesApi } from '../lib/api';
+import CargoFormModal from '../features/cargas/components/CargoFormModal';
+import { useCargoForm } from '../features/cargas/hooks/useCargoForm';
+import { useCargoMutations } from '../features/cargas/hooks/useCargoMutations';
+import { contractsApi, freightsApi, vehiclesApi, cargasApi, companiesApi } from '../lib/api';
 import { FormFieldErrors, getErrorMessage, resolveFieldError } from '../lib/errors';
 import { canAccess } from '../lib/permissions';
 import { isValidDateInput } from '../lib/validation';
-import { Contract, Freight, Vehicle } from '../types';
+import { Cargo, Company, Contract, Freight, Vehicle } from '../types';
 import { FieldLabel, FormAlert, FormDatePicker, hasRequiredFieldsFilled, useFormErrorFocus } from '../shared/forms';
 import Input from '../shared/ui/Input';
 
@@ -20,6 +24,7 @@ const initialFormData = {
   date: '',
   route: '',
   amount: '',
+  hasCargo: 'true',
 };
 
 type FreightFormField =
@@ -28,7 +33,8 @@ type FreightFormField =
   | 'contractId'
   | 'date'
   | 'route'
-  | 'amount';
+  | 'amount'
+  | 'hasCargo';
 
 function getFreightFormErrors(
   formData: typeof initialFormData,
@@ -64,13 +70,18 @@ function getFreightFormErrors(
 }
 
 export default function Freights() {
+  const navigate = useNavigate();
   const { userProfile } = useFirebase();
   const canCreate = canAccess(userProfile, 'freights', 'create');
   const canUpdate = canAccess(userProfile, 'freights', 'update');
   const canDelete = canAccess(userProfile, 'freights', 'delete');
+  const canReadCargas = canAccess(userProfile, 'cargas', 'read');
+  const canCreateCargas = canAccess(userProfile, 'cargas', 'create');
   const [freights, setFreights] = useState<Freight[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [cargas, setCargas] = useState<Cargo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFreight, setEditingFreight] = useState<Freight | null>(null);
@@ -81,19 +92,37 @@ export default function Freights() {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState(initialFormData);
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors<FreightFormField>>({});
+  const {
+    isModalOpen: isCargoModalOpen,
+    editingCargo,
+    formData: cargoFormData,
+    setFormData: setCargoFormData,
+    fieldErrors: cargoFieldErrors,
+    setFieldErrors: setCargoFieldErrors,
+    submitError: cargoSubmitError,
+    setSubmitError: setCargoSubmitError,
+    setSubmitSuccess: setCargoSubmitSuccess,
+    openCreate: openCreateCargo,
+    closeModal: closeCargoModal,
+  } = useCargoForm();
+  const { createCargo, updateCargo, isSubmitting: isSubmittingCargo } = useCargoMutations();
 
   const loadData = async () => {
     setLoading(true);
     setLoadError('');
     try {
-      const [freightsData, vehiclesData, contractsData] = await Promise.all([
+      const [freightsData, vehiclesData, contractsData, companiesData, cargasData] = await Promise.all([
         freightsApi.list(),
         vehiclesApi.list(),
         contractsApi.list(),
+        companiesApi.list(),
+        cargasApi.list(),
       ]);
       setFreights(freightsData);
       setVehicles(vehiclesData);
       setContracts(contractsData);
+      setCompanies(companiesData);
+      setCargas(cargasData);
     } catch (error) {
       setLoadError(getErrorMessage(error, 'Nao foi possivel carregar os fretes.'));
     } finally {
@@ -122,6 +151,14 @@ export default function Freights() {
     [freights]
   );
   const totalRevenue = useMemo(() => freights.reduce((acc, freight) => acc + Number(freight.amount || 0), 0), [freights]);
+  const cargoCountByFreightId = useMemo(
+    () =>
+      cargas.reduce<Record<string, number>>((accumulator, cargo) => {
+        accumulator[cargo.freightId] = (accumulator[cargo.freightId] || 0) + 1;
+        return accumulator;
+      }, {}),
+    [cargas],
+  );
   const filteredFreights = useMemo(
     () =>
       freights.filter((freight) =>
@@ -138,6 +175,10 @@ export default function Freights() {
       contract.id === formData.contractId
     ),
     [contracts, formData.contractId]
+  );
+  const currentCargoFreight = useMemo(
+    () => freights.find((freight) => freight.id === cargoFormData.freightId),
+    [cargoFormData.freightId, freights],
   );
 
   const formValidationErrors = useMemo(() => getFreightFormErrors(formData, selectedContract), [formData, selectedContract]);
@@ -205,6 +246,7 @@ export default function Freights() {
       date: formData.date,
       route: formData.route.trim(),
       amount: requiresAmount ? Number(formData.amount) : 0,
+      hasCargo: formData.hasCargo === 'true',
     };
 
     setIsSubmitting(true);
@@ -242,6 +284,109 @@ export default function Freights() {
     }
   };
 
+  const handleOpenAddCargo = (freight: Freight) => {
+    const linkedContract = freight.contractId
+      ? contracts.find((contract) => contract.id === freight.contractId)
+      : undefined;
+
+    openCreateCargo({
+      freightId: freight.id,
+      companyId: linkedContract?.companyId || '',
+      origin: freight.route.includes(' x ') ? freight.route.split(' x ')[0] : '',
+      destination: freight.route.includes(' x ') ? freight.route.split(' x ')[1] : '',
+    });
+  };
+
+  const handleSubmitCargo = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setCargoSubmitError('');
+    setCargoSubmitSuccess('');
+    setCargoFieldErrors({});
+
+    const nextFieldErrors: typeof cargoFieldErrors = {};
+    if (!cargoFormData.freightId) nextFieldErrors.freightId = 'Selecione o frete da carga.';
+    if (!cargoFormData.companyId) nextFieldErrors.companyId = 'Selecione o cliente da carga.';
+    if (cargoFormData.description.trim().length < 3) nextFieldErrors.description = 'Informe uma descricao valida para a carga.';
+    if (cargoFormData.cargoType.trim().length < 2) nextFieldErrors.cargoType = 'Informe o tipo da carga.';
+    if (cargoFormData.origin.trim().length < 3) nextFieldErrors.origin = 'Informe a origem da carga.';
+    if (cargoFormData.destination.trim().length < 3) nextFieldErrors.destination = 'Informe o destino da carga.';
+    if (cargoFormData.scheduledDate && !isValidDateInput(cargoFormData.scheduledDate)) nextFieldErrors.scheduledDate = 'Informe uma data prevista valida.';
+    if (cargoFormData.deliveredAt && !isValidDateInput(cargoFormData.deliveredAt)) nextFieldErrors.deliveredAt = 'Informe uma data de entrega valida.';
+
+    (['weight', 'volume', 'unitCount', 'merchandiseValue'] as const).forEach((field) => {
+      const value = cargoFormData[field];
+      if (!value) return;
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        nextFieldErrors[field] = 'Informe um valor valido.';
+      }
+    });
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setCargoFieldErrors(nextFieldErrors);
+      return;
+    }
+
+    const selectedCompany = companies.find((company) => company.id === cargoFormData.companyId);
+    const payload = {
+      freightId: cargoFormData.freightId,
+      companyId: cargoFormData.companyId,
+      cargoNumber: cargoFormData.cargoNumber.trim() || undefined,
+      description: cargoFormData.description.trim(),
+      cargoType: cargoFormData.cargoType.trim(),
+      weight: cargoFormData.weight ? Number(cargoFormData.weight) : undefined,
+      volume: cargoFormData.volume ? Number(cargoFormData.volume) : undefined,
+      unitCount: cargoFormData.unitCount ? Number(cargoFormData.unitCount) : undefined,
+      merchandiseValue: cargoFormData.merchandiseValue ? Number(cargoFormData.merchandiseValue) : undefined,
+      origin: cargoFormData.origin.trim(),
+      destination: cargoFormData.destination.trim(),
+      status: cargoFormData.status,
+      scheduledDate: cargoFormData.scheduledDate || undefined,
+      deliveredAt: cargoFormData.deliveredAt || undefined,
+      notes: cargoFormData.notes.trim() || undefined,
+      companyName: selectedCompany?.tradeName || selectedCompany?.corporateName,
+      freightRoute: currentCargoFreight?.route,
+    };
+
+    try {
+      if (editingCargo) {
+        await updateCargo.mutateAsync({ id: editingCargo.id, payload });
+      } else {
+        await createCargo.mutateAsync(payload);
+      }
+      await loadData();
+      setCargoSubmitSuccess(editingCargo ? 'Carga atualizada com sucesso.' : 'Carga cadastrada com sucesso.');
+      closeCargoModal();
+    } catch (error) {
+      const fieldError = resolveFieldError(error, {
+        fieldMap: {
+          freightId: 'freightId',
+          companyId: 'companyId',
+          cargoNumber: 'cargoNumber',
+          description: 'description',
+          cargoType: 'cargoType',
+          weight: 'weight',
+          volume: 'volume',
+          unitCount: 'unitCount',
+          merchandiseValue: 'merchandiseValue',
+          origin: 'origin',
+          destination: 'destination',
+          status: 'status',
+          scheduledDate: 'scheduledDate',
+          deliveredAt: 'deliveredAt',
+          notes: 'notes',
+        },
+      });
+
+      if (fieldError?.field) {
+        setCargoFieldErrors({ [fieldError.field]: fieldError.message });
+        return;
+      }
+
+      setCargoSubmitError(getErrorMessage(error, 'Nao foi possivel salvar a carga.'));
+    }
+  };
+
   const handleEdit = (freight: Freight) => {
     const linkedVehicle = vehicles.find((vehicle) => vehicle.id === freight.vehicleId || vehicle.plate === freight.plate);
     setEditingFreight(freight);
@@ -254,6 +399,7 @@ export default function Freights() {
       date: freight.date,
       route: freight.route,
       amount: freight.amount ? String(freight.amount) : '',
+      hasCargo: freight.hasCargo === false ? 'false' : 'true',
     });
     setSubmitError('');
     setSubmitSuccess('');
@@ -362,6 +508,13 @@ export default function Freights() {
                           Contrato: <span className="font-semibold text-on-surface">{freight.contractName}</span>
                         </p>
                       )}
+                      <p className="mt-1 text-[11px] text-on-surface-variant">
+                        Cargas:{' '}
+                        <span className="font-semibold text-on-surface">
+                          {cargoCountByFreightId[freight.id] || 0}
+                        </span>
+                        {freight.hasCargo === false ? ' (controle opcional desativado)' : ''}
+                      </p>
                     </div>
                     <div className="hidden sm:block text-right mr-6">
                       <span className="text-sm font-bold text-on-surface">{`R$ ${Number(freight.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}</span>
@@ -369,8 +522,28 @@ export default function Freights() {
                         {freight.billingType === 'contract_recurring' ? 'Sem receita por viagem' : 'Receita no frete'}
                       </p>
                     </div>
-                    {(canUpdate || canDelete) && (
+                    {(canUpdate || canDelete || canReadCargas || canCreateCargas) && (
                       <div className="flex items-center gap-2">
+                        {canReadCargas && freight.hasCargo !== false ? (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/cargas?freightId=${freight.id}`)}
+                            className="rounded-full p-2 text-outline transition-colors hover:bg-surface-container hover:text-on-surface"
+                            aria-label={`Ver cargas do frete ${freight.route}`}
+                          >
+                            <Search className="h-5 w-5" />
+                          </button>
+                        ) : null}
+                        {canCreateCargas && freight.hasCargo !== false ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddCargo(freight)}
+                            className="rounded-full p-2 text-outline transition-colors hover:bg-primary/10 hover:text-primary"
+                            aria-label={`Adicionar carga ao frete ${freight.route}`}
+                          >
+                            <PackagePlus className="h-5 w-5" />
+                          </button>
+                        ) : null}
                         {canUpdate && (
                           <button onClick={() => handleEdit(freight)} className="p-2 text-outline hover:text-on-surface transition-colors">
                             <Edit2 className="w-5 h-5" />
@@ -449,6 +622,19 @@ export default function Freights() {
 
             {showOperationalFields && (
               <>
+                <div className="space-y-2 md:col-span-2">
+                  <FieldLabel required>Possui cargas?</FieldLabel>
+                  <CustomSelect
+                    value={formData.hasCargo}
+                    onChange={(value) => updateField('hasCargo', value)}
+                    error={fieldErrors.hasCargo}
+                    options={[
+                      { value: 'true', label: 'Sim' },
+                      { value: 'false', label: 'Nao' },
+                    ]}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <FieldLabel required>Placa</FieldLabel>
                   <CustomSelect
@@ -507,6 +693,22 @@ export default function Freights() {
           </div>
         </form>
       </Modal>
+
+      <CargoFormModal
+        isOpen={isCargoModalOpen}
+        editing={Boolean(editingCargo)}
+        submitError={cargoSubmitError}
+        fieldErrors={cargoFieldErrors}
+        isSubmitting={isSubmittingCargo}
+        formData={cargoFormData}
+        freights={freights.filter((freight) => freight.hasCargo !== false)}
+        companies={companies}
+        freightLocked={Boolean(cargoFormData.freightId && !editingCargo)}
+        onClose={closeCargoModal}
+        onSubmit={handleSubmitCargo}
+        onChange={setCargoFormData}
+        onClearFieldError={(field) => setCargoFieldErrors((current) => ({ ...current, [field]: undefined }))}
+      />
     </div>
   );
 }

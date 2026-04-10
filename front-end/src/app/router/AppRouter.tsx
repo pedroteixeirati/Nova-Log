@@ -11,6 +11,7 @@ import Reports from '../../pages/Reports';
 import Suppliers from '../../pages/Suppliers';
 import Companies from '../../pages/Companies';
 import Contracts from '../../pages/Contracts';
+import Cargas from '../../pages/Cargas';
 import Freights from '../../pages/Freights';
 import Settings from '../../pages/Settings';
 import Support from '../../pages/Support';
@@ -61,6 +62,7 @@ export default function AppRouter() {
             <Route path="/empresas" element={<Companies />} />
             <Route path="/contratos" element={<Contracts />} />
             <Route path="/fretes" element={<Freights />} />
+            <Route path="/cargas" element={<Cargas />} />
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="/suporte" element={<Support />} />

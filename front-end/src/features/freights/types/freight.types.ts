@@ -9,4 +9,5 @@ export interface Freight {
   date: string;
   route: string;
   amount: number;
+  hasCargo?: boolean;
 }

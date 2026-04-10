@@ -16,11 +16,13 @@ describe('router navigation helpers', () => {
   it('resolve item a partir do caminho', () => {
     expect(getNavItemFromPath('/contas-a-pagar')).toBe('payables');
     expect(getNavItemFromPath('/fretes/123')).toBe('freights');
+    expect(getNavItemFromPath('/cargas/123')).toBe('cargas');
     expect(getNavItemFromPath('/rota-inexistente')).toBe('dashboard');
   });
 
   it('resolve caminho a partir do item', () => {
     expect(getPathFromNavItem('reports')).toBe('/relatorios');
+    expect(getPathFromNavItem('cargas')).toBe('/cargas');
   });
 
   it('retorna a primeira rota permitida para perfil financeiro', () => {

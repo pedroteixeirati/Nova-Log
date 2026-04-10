@@ -10,6 +10,7 @@ export type NavItem =
   | 'companies'
   | 'contracts'
   | 'freights'
+  | 'cargas'
   | 'reports'
   | 'settings'
   | 'support';
