@@ -12,7 +12,8 @@ export const cargasResource: ResourceConfig = {
   fields: [
     { api: 'freightId', db: 'freight_id' },
     { api: 'freightDisplayId', db: 'freight_display_id', type: 'number' },
-    { api: 'freightRoute', db: 'freight_route' },
+    { api: 'freightOrigin', db: 'freight_origin' },
+    { api: 'freightDestination', db: 'freight_destination' },
     { api: 'companyId', db: 'company_id' },
     { api: 'companyName', db: 'company_name' },
     { api: 'cargoNumber', db: 'cargo_number' },

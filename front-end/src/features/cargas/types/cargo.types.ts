@@ -5,7 +5,8 @@ export interface Cargo {
   displayId?: number;
   freightId: string;
   freightDisplayId?: number;
-  freightRoute?: string;
+  freightOrigin?: string;
+  freightDestination?: string;
   companyId: string;
   companyName?: string;
   cargoNumber?: string;

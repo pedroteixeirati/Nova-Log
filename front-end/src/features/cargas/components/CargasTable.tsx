@@ -98,7 +98,7 @@ export default function CargasTable({
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Frete</p>
                 <p className="mt-1 font-medium text-on-surface">{cargo.freightDisplayId ? `Frete #${cargo.freightDisplayId}` : 'Frete vinculado'}</p>
-                <p className="mt-1 text-xs text-on-surface-variant">{cargo.freightRoute || '-'}</p>
+                <p className="mt-1 text-xs text-on-surface-variant">{cargo.freightOrigin && cargo.freightDestination ? `${cargo.freightOrigin} x ${cargo.freightDestination}` : '-'}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Rota</p>
@@ -178,7 +178,9 @@ export default function CargasTable({
                 <td className="px-5 py-4">
                   <div className="space-y-1">
                     <div className="font-semibold">{cargo.freightDisplayId ? `Frete #${cargo.freightDisplayId}` : 'Frete vinculado'}</div>
-                    <div className="text-xs text-on-surface-variant">{cargo.freightRoute || '-'}</div>
+                    <div className="text-xs text-on-surface-variant">
+                      {cargo.freightOrigin && cargo.freightDestination ? `${cargo.freightOrigin} x ${cargo.freightDestination}` : '-'}
+                    </div>
                   </div>
                 </td>
                 <td className="px-5 py-4">{cargo.cargoType}</td>

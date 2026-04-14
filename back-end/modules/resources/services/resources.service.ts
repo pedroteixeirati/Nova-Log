@@ -65,6 +65,9 @@ async function syncFreightIfNeeded(resourceName: string, row: Record<string, unk
     return;
   }
 
+  const origin = String(row.origin || '');
+  const destination = String(row.destination || '');
+
   await syncFreightRevenue(tenantId, {
     id: row.id as string,
     plate: String(row.plate || ''),
@@ -72,7 +75,8 @@ async function syncFreightIfNeeded(resourceName: string, row: Record<string, unk
     contract_name: (row.contract_name as string | null) || null,
     billing_type: (row.billing_type as FreightRevenueSeedRow['billing_type']) || 'standalone',
     date: String(row.date || ''),
-    route: String(row.route || ''),
+    origin,
+    destination,
     amount: row.amount as string | number,
   }, userId);
 }

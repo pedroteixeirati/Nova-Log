@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { companiesApi, contractsApi, expensesApi, freightsApi, payablesApi, revenuesApi, vehiclesApi } from '../../lib/api';
+import { formatFreightSegment } from '../../features/freights/utils/freightSegment';
 import { Company, Contract, Expense, Freight, Payable, Revenue, Vehicle } from '../../types';
 import { getCurrentMonthRange, parseLocalDate, ReportTab, toDateInputValue } from './reports.shared';
 
@@ -163,9 +164,10 @@ export function useReportsData() {
 
   const routeRanking = useMemo(() => {
     const grouped = filteredFreights.reduce((acc, freight) => {
-      const current = acc[freight.route] || { route: freight.route, trips: 0 };
+      const segment = formatFreightSegment(freight);
+      const current = acc[segment] || { route: segment, trips: 0 };
       current.trips += 1;
-      acc[freight.route] = current;
+      acc[segment] = current;
       return acc;
     }, {} as Record<string, { route: string; trips: number }>);
 

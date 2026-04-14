@@ -14,24 +14,30 @@ test('validacao de cargas rejeita identificadores invalidos com code e field con
   assert.match(cargosErrorsSource, /new AppError\('Selecione um frete valido para a carga\.', \{ code: 'invalid_cargo_freight', field: 'freightId' \}\)/);
 });
 
-test('servico de cargas normaliza payload e valida relacionamentos do tenant', () => {
+test('servico de cargas normaliza payload e leva origem\/destino do frete vinculado', () => {
   assert.match(cargosServiceSource, /const freightId = normalizeRequiredText\(body\.freightId\);/);
   assert.match(cargosServiceSource, /const companyId = normalizeRequiredText\(body\.companyId\);/);
   assert.match(cargosServiceSource, /const weight = body\.weight === ''[\s\S]*Number\(body\.weight\);/);
   assert.match(cargosServiceSource, /if \(!isValidUuid\(freightId\)\) throw cargoErrors\.invalidFreight\(\);/);
   assert.match(cargosServiceSource, /const freight = await findTenantFreightForCargo\(freightId, tenantId\);/);
+  assert.match(cargosServiceSource, /freightOrigin: freight\.origin,/);
+  assert.match(cargosServiceSource, /freightDestination: freight\.destination,/);
+  assert.doesNotMatch(cargosServiceSource, /freightRoute/);
   assert.match(cargosServiceSource, /const company = await findTenantCompanyForCargo\(companyId, tenantId\);/);
   assert.match(cargosServiceSource, /companyName: company\.trade_name \|\| company\.corporate_name,/);
 });
 
-test('repositorio de cargas consulta frete e cliente no mesmo tenant e lista por freight_id', () => {
-  assert.match(cargosRepositorySource, /from freights[\s\S]*where id = \$1[\s\S]*tenant_id = \$2/i);
+test('repositorio de cargas consulta frete com origem e destino no mesmo tenant e lista por freight_id', () => {
+  assert.match(cargosRepositorySource, /select id, display_id, origin, destination[\s\S]*from freights[\s\S]*where id = \$1[\s\S]*tenant_id = \$2/i);
   assert.match(cargosRepositorySource, /from companies[\s\S]*where id = \$1[\s\S]*tenant_id = \$2/i);
-  assert.match(cargosRepositorySource, /from cargas[\s\S]*where freight_id = \$1[\s\S]*tenant_id = \$2/i);
+  assert.match(cargosRepositorySource, /select id, display_id, tenant_id, freight_id, freight_display_id, freight_origin, freight_destination[\s\S]*from cargas[\s\S]*where freight_id = \$1[\s\S]*tenant_id = \$2/i);
 });
 
-test('resource de cargas expoe campos operacionais e comerciais para o front', () => {
+test('resource de cargas expoe campos operacionais, comerciais e trecho do frete para o front', () => {
   assert.match(cargosResourceSource, /\{ api: 'freightId', db: 'freight_id' \}/);
+  assert.match(cargosResourceSource, /\{ api: 'freightOrigin', db: 'freight_origin' \}/);
+  assert.match(cargosResourceSource, /\{ api: 'freightDestination', db: 'freight_destination' \}/);
+  assert.doesNotMatch(cargosResourceSource, /freightRoute/);
   assert.match(cargosResourceSource, /\{ api: 'companyName', db: 'company_name' \}/);
   assert.match(cargosResourceSource, /\{ api: 'cargoType', db: 'cargo_type' \}/);
   assert.match(cargosResourceSource, /\{ api: 'merchandiseValue', db: 'merchandise_value', type: 'number' \}/);

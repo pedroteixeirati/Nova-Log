@@ -84,7 +84,7 @@ export default function CargasPage() {
           cargo.cargoNumber,
           cargo.description,
           cargo.companyName,
-          cargo.freightRoute,
+          cargo.freightOrigin && cargo.freightDestination ? `${cargo.freightOrigin} x ${cargo.freightDestination}` : '',
           cargo.origin,
           cargo.destination,
         ]
@@ -144,7 +144,8 @@ export default function CargasPage() {
       freightId: formData.freightId,
       companyId: formData.companyId,
       companyName: selectedCompany?.tradeName || selectedCompany?.corporateName,
-      freightRoute: selectedFreight?.route,
+      freightOrigin: selectedFreight?.origin,
+      freightDestination: selectedFreight?.destination,
       cargoNumber: formData.cargoNumber.trim() || undefined,
       description: formData.description.trim(),
       cargoType: formData.cargoType.trim(),

@@ -40,7 +40,8 @@ export type FreightRevenueSeedRow = {
   contract_name: string | null;
   billing_type: 'standalone' | 'contract_recurring' | 'contract_per_trip';
   date: string;
-  route: string;
+  origin: string;
+  destination: string;
   amount: string | number;
 };
 

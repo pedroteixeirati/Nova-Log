@@ -10,7 +10,8 @@ export type FreightRow = {
   contract_name: string | null;
   billing_type: 'standalone' | 'contract_recurring' | 'contract_per_trip';
   date: string;
-  route: string;
+  origin: string;
+  destination: string;
   amount: string | number;
   has_carga: boolean;
 };
@@ -39,7 +40,8 @@ export async function listTenantFreights(tenantId: string) {
             contract_name,
             billing_type,
             date,
-            route,
+            origin,
+            destination,
             amount,
             has_carga
      from freights
@@ -59,7 +61,8 @@ export async function insertTenantFreight(
     contractName: string;
     billingType: 'standalone' | 'contract_recurring' | 'contract_per_trip';
     date: string;
-    route: string;
+    origin: string;
+    destination: string;
     amount: number;
     hasCargo: boolean;
   },
@@ -77,11 +80,12 @@ export async function insertTenantFreight(
        contract_name,
        billing_type,
        date,
-       route,
+       origin,
+       destination,
        amount,
        has_carga
      )
-     values ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     values ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      returning id,
                display_id,
                tenant_id,
@@ -91,7 +95,8 @@ export async function insertTenantFreight(
                contract_name,
                billing_type,
                date,
-               route,
+               origin,
+               destination,
                amount,
                has_carga`,
     [
@@ -103,7 +108,8 @@ export async function insertTenantFreight(
       payload.contractName,
       payload.billingType,
       payload.date,
-      payload.route,
+      payload.origin,
+      payload.destination,
       payload.amount,
       payload.hasCargo,
     ]
@@ -121,7 +127,8 @@ export async function updateTenantFreight(
     contractName: string;
     billingType: 'standalone' | 'contract_recurring' | 'contract_per_trip';
     date: string;
-    route: string;
+    origin: string;
+    destination: string;
     amount: number;
     hasCargo: boolean;
   },
@@ -136,13 +143,14 @@ export async function updateTenantFreight(
          contract_name = $4,
          billing_type = $5,
          date = $6,
-         route = $7,
-         amount = $8,
-         has_carga = $9,
-         updated_by_user_id = $10,
+         origin = $7,
+         destination = $8,
+         amount = $9,
+         has_carga = $10,
+         updated_by_user_id = $11,
          updated_at = now()
-     where id = $11
-       and tenant_id = $12
+     where id = $12
+       and tenant_id = $13
      returning id,
                display_id,
                tenant_id,
@@ -152,7 +160,8 @@ export async function updateTenantFreight(
                contract_name,
                billing_type,
                date,
-               route,
+               origin,
+               destination,
                amount,
                has_carga`,
     [
@@ -162,7 +171,8 @@ export async function updateTenantFreight(
       payload.contractName,
       payload.billingType,
       payload.date,
-      payload.route,
+      payload.origin,
+      payload.destination,
       payload.amount,
       payload.hasCargo,
       userId || null,

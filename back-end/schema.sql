@@ -193,7 +193,8 @@ create table if not exists freights (
   contract_name text,
   billing_type text not null default 'standalone' check (billing_type in ('standalone', 'contract_recurring', 'contract_per_trip')),
   date text not null,
-  route text not null,
+  origin text not null,
+  destination text not null,
   amount numeric not null default 0,
   has_carga boolean not null default true,
   created_by_user_id uuid references users(id) on delete set null,
@@ -208,7 +209,8 @@ create table if not exists cargas (
   tenant_id uuid not null references tenants(id) on delete cascade,
   freight_id uuid not null references freights(id) on delete cascade,
   freight_display_id bigint,
-  freight_route text not null,
+  freight_origin text not null,
+  freight_destination text not null,
   company_id uuid not null references companies(id) on delete restrict,
   company_name text not null,
   cargo_number text,
@@ -366,15 +368,29 @@ alter table if exists freights add column if not exists contract_id uuid referen
 alter table if exists freights add column if not exists contract_name text;
 alter table if exists freights add column if not exists billing_type text not null default 'standalone';
 alter table if exists freights add column if not exists has_carga boolean not null default true;
+alter table if exists freights add column if not exists origin text;
+alter table if exists freights add column if not exists destination text;
 alter table if exists freights drop constraint if exists freights_billing_type_check;
 alter table if exists freights
   add constraint freights_billing_type_check check (billing_type in ('standalone', 'contract_recurring', 'contract_per_trip'));
 alter table if exists freights drop column if exists owner_uid;
+update freights
+set origin = split_part(route, ' x ', 1)
+where (origin is null or origin = '')
+  and route like '% x %';
+update freights
+set destination = split_part(route, ' x ', 2)
+where (destination is null or destination = '')
+  and route like '% x %';
+update freights set origin = coalesce(origin, '') where origin is null;
+update freights set destination = coalesce(destination, '') where destination is null;
+alter table if exists freights drop column if exists route;
 alter table if exists cargas add column if not exists display_id bigint;
 alter table if exists cargas add column if not exists tenant_id uuid references tenants(id) on delete cascade;
 alter table if exists cargas add column if not exists freight_id uuid references freights(id) on delete cascade;
 alter table if exists cargas add column if not exists freight_display_id bigint;
-alter table if exists cargas add column if not exists freight_route text;
+alter table if exists cargas add column if not exists freight_origin text;
+alter table if exists cargas add column if not exists freight_destination text;
 alter table if exists cargas add column if not exists company_id uuid references companies(id) on delete restrict;
 alter table if exists cargas add column if not exists company_name text;
 alter table if exists cargas add column if not exists cargo_number text;
@@ -392,12 +408,25 @@ alter table if exists cargas add column if not exists delivered_at text;
 alter table if exists cargas add column if not exists notes text;
 alter table if exists cargas add column if not exists created_by_user_id uuid references users(id) on delete set null;
 alter table if exists cargas add column if not exists updated_by_user_id uuid references users(id) on delete set null;
-update cargas set freight_route = '' where freight_route is null;
+update cargas c
+set freight_origin = f.origin,
+    freight_destination = f.destination
+from freights f
+where c.freight_id = f.id
+  and (
+    c.freight_origin is null
+    or c.freight_origin = ''
+    or c.freight_destination is null
+    or c.freight_destination = ''
+  );
+update cargas set freight_origin = '' where freight_origin is null;
+update cargas set freight_destination = '' where freight_destination is null;
 update cargas set company_name = '' where company_name is null;
 update cargas set description = '' where description is null;
 update cargas set cargo_type = '' where cargo_type is null;
 update cargas set origin = '' where origin is null;
 update cargas set destination = '' where destination is null;
+alter table if exists cargas drop column if exists freight_route;
 alter table if exists cargas drop constraint if exists cargas_status_check;
 alter table if exists cargas
   add constraint cargas_status_check
