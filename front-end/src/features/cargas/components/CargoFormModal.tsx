@@ -6,6 +6,7 @@ import { FieldLabel, FormAlert, FormDatePicker, FormFieldError, hasRenderableFie
 import Input from '../../../shared/ui/Input';
 import { Company } from '../../companies/types/company.types';
 import { Freight } from '../../freights/types/freight.types';
+import { formatFreightSegment } from '../../freights/utils/freightSegment';
 import { CargoFormData, CargoFormField } from '../hooks/useCargoForm';
 import { FormFieldErrors } from '../../../lib/errors';
 
@@ -78,7 +79,7 @@ export default function CargoFormModal({
               placeholder="Selecione um frete"
               options={freights.map((freight) => ({
                 value: freight.id,
-                label: `${freight.displayId ? `#${freight.displayId} - ` : ''}${freight.route}`,
+                label: `${freight.displayId ? `#${freight.displayId} - ` : ''}${formatFreightSegment(freight)}`,
               }))}
             />
           </div>
@@ -122,7 +123,7 @@ export default function CargoFormModal({
               onClearFieldError('cargoType');
               onChange((current) => ({ ...current, cargoType: event.target.value }));
             }}
-            placeholder="Ex: Alimentos refrigerados"
+            placeholder="Ex: Minerio"
           />
 
           <Input

@@ -2,7 +2,8 @@ export type FreightInput = {
   vehicleId: string;
   contractId?: string | null;
   date: string;
-  route: string;
+  origin: string;
+  destination: string;
   amount?: number | string | null;
   hasCargo?: boolean | 'true' | 'false';
 };
@@ -15,7 +16,8 @@ export type FreightPayload = {
   contractName: string;
   billingType: 'standalone' | 'contract_recurring' | 'contract_per_trip';
   date: string;
-  route: string;
+  origin: string;
+  destination: string;
   amount: number;
   hasCargo: boolean;
 };

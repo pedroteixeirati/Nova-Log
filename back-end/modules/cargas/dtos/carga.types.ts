@@ -22,7 +22,8 @@ export type CargoPayload = {
   displayId?: number;
   freightId: string;
   freightDisplayId?: number | null;
-  freightRoute: string;
+  freightOrigin: string;
+  freightDestination: string;
   companyId: string;
   companyName: string;
   cargoNumber: string;

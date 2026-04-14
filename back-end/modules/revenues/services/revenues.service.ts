@@ -28,6 +28,10 @@ function formatMonthStartDate(referenceDate: Date) {
   return startOfMonth(referenceDate).toISOString().slice(0, 10);
 }
 
+function formatFreightSegment(freight: { origin: string; destination: string }) {
+  return `${freight.origin} x ${freight.destination}`;
+}
+
 function isContractActiveForCompetence(contract: { start_date: string; end_date: string }, competenceDate: Date) {
   const startDate = parseDateInput(contract.start_date);
   if (!startDate) return false;
@@ -142,8 +146,9 @@ export async function syncFreightRevenue(tenantId: string | undefined, freight: 
   let companyId: string | null = null;
   let companyName = 'Fretes avulsos';
   let contractId: string | null = null;
-  let contractName = freight.route;
-  let description = `Frete avulso ${freight.plate} - ${freight.route}`;
+  const freightSegment = formatFreightSegment(freight);
+  let contractName = freightSegment;
+  let description = `Frete avulso ${freight.plate} - ${freightSegment}`;
 
   if (freight.billing_type === 'contract_per_trip' && freight.contract_id) {
     const linkedContract = await findLinkedContract(tenantId, freight.contract_id);
@@ -155,7 +160,7 @@ export async function syncFreightRevenue(tenantId: string | undefined, freight: 
     companyName = linkedContract.company_name;
     contractId = linkedContract.id;
     contractName = linkedContract.contract_name;
-    description = `Frete do contrato ${linkedContract.contract_name} - ${freight.route}`;
+    description = `Frete do contrato ${linkedContract.contract_name} - ${freightSegment}`;
   }
 
   await upsertFreightRevenue({

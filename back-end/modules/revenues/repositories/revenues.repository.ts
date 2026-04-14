@@ -157,7 +157,7 @@ export function insertScheduledContractRevenue(params: {
 
 export function listFreightsForRevenueSync(tenantId: string) {
   return pool.query<FreightRevenueSeedRow>(
-    `select id, plate, contract_id, contract_name, billing_type, date, route, amount
+    `select id, plate, contract_id, contract_name, billing_type, date, origin, destination, amount
      from freights
      where tenant_id = $1`,
     [tenantId]

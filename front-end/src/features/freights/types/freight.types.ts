@@ -7,7 +7,8 @@ export interface Freight {
   contractName?: string;
   billingType?: 'standalone' | 'contract_recurring' | 'contract_per_trip';
   date: string;
-  route: string;
+  origin: string;
+  destination: string;
   amount: number;
   hasCargo?: boolean;
 }

@@ -39,7 +39,8 @@ function mapFreightRow(row: FreightRow) {
     contractName: row.contract_name || '',
     billingType: row.billing_type,
     date: row.date,
-    route: row.route,
+    origin: row.origin,
+    destination: row.destination,
     amount: Number(row.amount || 0),
     hasCargo: row.has_carga,
   };
@@ -49,14 +50,16 @@ export async function validateFreightPayload(body: FreightInput, tenantId: strin
   const vehicleId = normalizeRequiredText(body.vehicleId);
   const contractIdInput = normalizeOptionalText((body.contractId as string | undefined) || '');
   const date = normalizeRequiredText(body.date);
-  const route = normalizeRequiredText(body.route);
+  const origin = normalizeRequiredText(body.origin);
+  const destination = normalizeRequiredText(body.destination);
   const rawAmount = body.amount === '' || body.amount === null || body.amount === undefined ? 0 : Number(body.amount);
   const hasCargo = body.hasCargo === undefined ? true : body.hasCargo === true || body.hasCargo === 'true';
 
   if (!isValidUuid(vehicleId)) throw freightErrors.invalidVehicle();
   if (contractIdInput && !isValidUuid(contractIdInput)) throw freightErrors.invalidContract();
   if (!isValidDate(date)) throw freightErrors.invalidDate();
-  if (route.length < 5) throw freightErrors.invalidRoute();
+  if (origin.length < 3) throw freightErrors.invalidOrigin();
+  if (destination.length < 3) throw freightErrors.invalidDestination();
   if (!isNonNegativeNumber(rawAmount)) throw freightErrors.invalidAmount();
 
   const vehicle = await findTenantVehicleForFreight(vehicleId, tenantId);
@@ -95,7 +98,8 @@ export async function validateFreightPayload(body: FreightInput, tenantId: strin
     contractName,
     billingType,
     date,
-    route,
+    origin,
+    destination,
     amount,
     hasCargo,
   };

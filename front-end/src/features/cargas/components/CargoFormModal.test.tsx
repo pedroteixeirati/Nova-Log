@@ -13,7 +13,7 @@ describe('CargoFormModal', () => {
         fieldErrors={{}}
         isSubmitting={false}
         formData={defaultCargoFormData}
-        freights={[{ id: 'freight-1', route: 'Campinas x Santos', plate: 'ABC-1234', vehicleId: 'vehicle-1', date: '2026-04-10', amount: 1000 }]}
+        freights={[{ id: 'freight-1', origin: 'Campinas/SP', destination: 'Santos/SP', plate: 'ABC-1234', vehicleId: 'vehicle-1', date: '2026-04-10', amount: 1000 }]}
         companies={[{ id: 'company-1', tradeName: 'Atlas', corporateName: 'Atlas Ltda', cnpj: '', stateRegistration: '', municipalRegistration: '', legalRepresentative: '', representativeCpf: '', email: '', phone: '', address: '', city: '', state: '', zipCode: '', status: 'active' }]}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
@@ -42,7 +42,7 @@ describe('CargoFormModal', () => {
           origin: 'Campinas/SP',
           destination: 'Santos/SP',
         }}
-        freights={[{ id: 'freight-1', route: 'Campinas x Santos', plate: 'ABC-1234', vehicleId: 'vehicle-1', date: '2026-04-10', amount: 1000 }]}
+        freights={[{ id: 'freight-1', origin: 'Campinas/SP', destination: 'Santos/SP', plate: 'ABC-1234', vehicleId: 'vehicle-1', date: '2026-04-10', amount: 1000 }]}
         companies={[{ id: 'company-1', tradeName: 'Atlas', corporateName: 'Atlas Ltda', cnpj: '', stateRegistration: '', municipalRegistration: '', legalRepresentative: '', representativeCpf: '', email: '', phone: '', address: '', city: '', state: '', zipCode: '', status: 'active' }]}
         onClose={vi.fn()}
         onSubmit={vi.fn()}

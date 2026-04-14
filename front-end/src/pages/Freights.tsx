@@ -7,6 +7,7 @@ import { useFirebase } from '../context/FirebaseContext';
 import CargoFormModal from '../features/cargas/components/CargoFormModal';
 import { useCargoForm } from '../features/cargas/hooks/useCargoForm';
 import { useCargoMutations } from '../features/cargas/hooks/useCargoMutations';
+import { formatFreightSegment } from '../features/freights/utils/freightSegment';
 import { contractsApi, freightsApi, vehiclesApi, cargasApi, companiesApi } from '../lib/api';
 import { formatDateOnlyPtBr } from '../lib/date';
 import { FormFieldErrors, getErrorMessage, resolveFieldError } from '../lib/errors';
@@ -22,7 +23,8 @@ const initialFormData = {
   plate: '',
   contractId: '',
   date: '',
-  route: '',
+  origin: '',
+  destination: '',
   amount: '',
   hasCargo: 'true',
 };
@@ -32,7 +34,8 @@ type FreightFormField =
   | 'vehicleId'
   | 'contractId'
   | 'date'
-  | 'route'
+  | 'origin'
+  | 'destination'
   | 'amount'
   | 'hasCargo';
 
@@ -55,9 +58,8 @@ function getFreightFormErrors(
     errors.date = 'Informe a data do frete.';
   }
 
-  if (formData.route.trim().length < 5) {
-    errors.route = 'Informe uma rota valida.';
-  }
+  if (formData.origin.trim().length < 3) errors.origin = 'Informe uma origem valida.';
+  if (formData.destination.trim().length < 3) errors.destination = 'Informe um destino valido.';
 
   if (requiresAmount) {
     const amount = Number(formData.amount);
@@ -161,7 +163,7 @@ export default function Freights() {
     () =>
       freights.filter((freight) =>
         freight.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        freight.route.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        formatFreightSegment(freight).toLowerCase().includes(searchTerm.toLowerCase()) ||
         (freight.contractName || '').toLowerCase().includes(searchTerm.toLowerCase())
       ),
     [freights, searchTerm]
@@ -183,7 +185,8 @@ export default function Freights() {
   const canSubmit = hasRequiredFieldsFilled(formData, [
     'vehicleId',
     'date',
-    'route',
+    'origin',
+    'destination',
     { field: 'contractId', isFilled: (value, currentFormData) => currentFormData.freightType !== 'contract' || (typeof value === 'string' && value.trim().length > 0) },
     { field: 'amount', isFilled: (value, currentFormData) => {
       const requiresCurrentAmount = currentFormData.freightType === 'standalone' || !selectedContract || selectedContract.remunerationType === 'per_trip';
@@ -239,7 +242,8 @@ export default function Freights() {
       plate: selectedVehicle?.plate || formData.plate,
       contractId: formData.freightType === 'contract' ? formData.contractId || undefined : undefined,
       date: formData.date,
-      route: formData.route.trim(),
+      origin: formData.origin.trim(),
+      destination: formData.destination.trim(),
       amount: requiresAmount ? Number(formData.amount) : 0,
       hasCargo: formData.hasCargo === 'true',
     };
@@ -260,7 +264,8 @@ export default function Freights() {
           vehicleId: 'vehicleId',
           contractId: 'contractId',
           date: 'date',
-          route: 'route',
+          origin: 'origin',
+          destination: 'destination',
           amount: 'amount',
         },
       });
@@ -287,8 +292,8 @@ export default function Freights() {
     openCreateCargo({
       freightId: freight.id,
       companyId: linkedContract?.companyId || '',
-      origin: freight.route.includes(' x ') ? freight.route.split(' x ')[0] : '',
-      destination: freight.route.includes(' x ') ? freight.route.split(' x ')[1] : '',
+      origin: freight.origin || '',
+      destination: freight.destination || '',
     });
   };
 
@@ -340,7 +345,8 @@ export default function Freights() {
       deliveredAt: cargoFormData.deliveredAt || undefined,
       notes: cargoFormData.notes.trim() || undefined,
       companyName: selectedCompany?.tradeName || selectedCompany?.corporateName,
-      freightRoute: currentCargoFreight?.route,
+      freightOrigin: currentCargoFreight?.origin,
+      freightDestination: currentCargoFreight?.destination,
     };
 
     try {
@@ -392,7 +398,8 @@ export default function Freights() {
       plate: freight.plate,
       contractId: freight.contractId || '',
       date: freight.date,
-      route: freight.route,
+      origin: freight.origin,
+      destination: freight.destination,
       amount: freight.amount ? String(freight.amount) : '',
       hasCargo: freight.hasCargo === false ? 'false' : 'true',
     });
@@ -448,7 +455,7 @@ export default function Freights() {
         <div className="lg:col-span-12 flex flex-col md:flex-row gap-4">
           <div className="flex-1 bg-surface-container-lowest rounded-xl p-2 flex items-center shadow-sm focus-within:shadow-md transition-shadow">
             <Search className="w-5 h-5 text-outline ml-3" />
-            <input type="text" placeholder="Buscar por placa, rota ou contrato..." className="w-full border-none focus:ring-0 bg-transparent text-on-surface text-sm py-2 px-4 placeholder:text-outline/60" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Buscar por placa, origem, destino ou contrato..." className="w-full border-none focus:ring-0 bg-transparent text-on-surface text-sm py-2 px-4 placeholder:text-outline/60" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             <div className="h-6 w-px bg-outline/20 mx-2" />
             <div className="flex items-center gap-2 px-2">
               <Filter className="w-4 h-4 text-primary" />
@@ -478,13 +485,16 @@ export default function Freights() {
             ) : (
               <div className="space-y-4">
                 {filteredFreights.map((freight) => (
+                  (() => {
+                    const freightSegment = formatFreightSegment(freight);
+                    return (
                   <div key={freight.id} className="group flex items-center p-3 rounded-xl hover:bg-primary-fixed-dim/10 transition-all">
                     <div className="w-12 h-12 bg-surface-container rounded-lg flex items-center justify-center text-primary">
                       <Route className="w-6 h-6" />
                     </div>
                     <div className="ml-4 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold font-headline text-on-surface">{freight.route}</span>
+                        <span className="text-sm font-bold font-headline text-on-surface">{freightSegment}</span>
                         <span className="text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded uppercase tracking-wider font-bold">{freight.plate}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded uppercase tracking-wider font-bold ${billingTypeTone(freight.billingType)}`}>
                           {billingTypeLabel(freight.billingType)}
@@ -496,7 +506,7 @@ export default function Freights() {
                       </p>
                       <p className="text-[11px] text-on-surface-variant mt-1 inline-flex items-center gap-1">
                         <MapPinned className="w-3.5 h-3.5" />
-                        {freight.route}
+                        {freightSegment}
                       </p>
                       {freight.contractName && (
                         <p className="text-[11px] text-on-surface-variant mt-1">
@@ -524,7 +534,7 @@ export default function Freights() {
                             type="button"
                             onClick={() => handleOpenAddCargo(freight)}
                             className="rounded-full p-2 text-outline transition-colors hover:bg-primary/10 hover:text-primary"
-                            aria-label={`Adicionar carga ao frete ${freight.route}`}
+                            aria-label={`Adicionar carga ao frete ${freightSegment}`}
                           >
                             <PackagePlus className="h-5 w-5" />
                           </button>
@@ -542,6 +552,8 @@ export default function Freights() {
                       </div>
                     )}
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             )}
@@ -639,7 +651,9 @@ export default function Freights() {
 
                 <FormDatePicker label="Data" value={formData.date} onChange={(value) => updateField('date', value)} error={fieldErrors.date} />
 
-                <Field label="Rota" value={formData.route} onChange={(value) => updateField('route', value)} containerClassName="md:col-span-2" placeholder="Ex: Campinas/SP x Belo Horizonte/MG" error={fieldErrors.route} />
+                <Field label="Origem" value={formData.origin} onChange={(value) => updateField('origin', value)} placeholder="Ex: Campinas/SP" error={fieldErrors.origin} />
+
+                <Field label="Destino" value={formData.destination} onChange={(value) => updateField('destination', value)} placeholder="Ex: Belo Horizonte/MG" error={fieldErrors.destination} />
 
                 {requiresAmount ? (
                   <Field label="Valor do frete" type="number" min={0} step="0.01" value={formData.amount} onChange={(value) => updateField('amount', value)} error={fieldErrors.amount} />

@@ -7,13 +7,21 @@ const freightsServiceSource = readFileSync(resolve(process.cwd(), 'back-end/modu
 const freightsRepositorySource = readFileSync(resolve(process.cwd(), 'back-end/modules/freights/repositories/freights.repository.ts'), 'utf8');
 const freightsControllerSource = readFileSync(resolve(process.cwd(), 'back-end/modules/freights/controllers/freights.controller.ts'), 'utf8');
 
-test('servico de fretes expõe permissoes explícitas do domínio', () => {
+test('servico de fretes expoe permissoes explicitas do dominio', () => {
   assert.match(freightsServiceSource, /export const freightsPermissions: ResourcePermissions = \{/);
   assert.match(freightsServiceSource, /read: \['dev', 'owner', 'admin', 'financial', 'operational', 'driver', 'viewer'\]/);
   assert.match(freightsServiceSource, /delete: \['dev', 'owner', 'admin', 'operational'\]/);
 });
 
-test('servico de fretes valida payload e orquestra CRUD explícito com revenues', () => {
+test('servico de fretes valida origem e destino explicitamente no dominio', () => {
+  assert.doesNotMatch(freightsServiceSource, /resolveOriginAndDestination|buildFreightRoute/);
+  assert.match(freightsServiceSource, /const origin = normalizeRequiredText\(body\.origin\);/);
+  assert.match(freightsServiceSource, /const destination = normalizeRequiredText\(body\.destination\);/);
+  assert.match(freightsServiceSource, /if \(origin.length < 3\) throw freightErrors\.invalidOrigin\(\);/);
+  assert.match(freightsServiceSource, /if \(destination.length < 3\) throw freightErrors\.invalidDestination\(\);/);
+});
+
+test('servico de fretes orquestra CRUD explicito com revenues', () => {
   assert.match(freightsServiceSource, /export async function createFreight\(auth: AuthContext \| undefined, body: FreightInput\)/);
   assert.match(freightsServiceSource, /const payload = await validateFreightPayload\(body, tenantId\);/);
   assert.match(freightsServiceSource, /const row = await insertTenantFreight\(payload, tenantId, auth\?\.userId\);/);
@@ -21,14 +29,16 @@ test('servico de fretes valida payload e orquestra CRUD explícito com revenues'
   assert.match(freightsServiceSource, /await deleteFreightRevenue\(tenantId, id\);/);
 });
 
-test('repositorio de fretes consulta e persiste dados diretamente na tabela do domínio', () => {
+test('repositorio de fretes consulta e persiste origem e destino diretamente na tabela do dominio', () => {
+  assert.match(freightsRepositorySource, /select id,[\s\S]*display_id,[\s\S]*tenant_id,[\s\S]*vehicle_id,[\s\S]*plate,[\s\S]*contract_id,[\s\S]*contract_name,[\s\S]*billing_type,[\s\S]*date,[\s\S]*origin,[\s\S]*destination,[\s\S]*amount,[\s\S]*has_carga/i);
+  assert.doesNotMatch(freightsRepositorySource, /\broute\b/);
   assert.match(freightsRepositorySource, /from freights[\s\S]*where tenant_id = \$1[\s\S]*order by date desc/i);
   assert.match(freightsRepositorySource, /insert into freights/i);
   assert.match(freightsRepositorySource, /update freights/i);
   assert.match(freightsRepositorySource, /delete from freights/i);
 });
 
-test('controller de fretes usa service explícito em vez de resources', () => {
+test('controller de fretes usa service explicito em vez de resources', () => {
   assert.match(freightsControllerSource, /import \{[\s\S]*createFreight,[\s\S]*deleteFreight,[\s\S]*freightsPermissions,[\s\S]*listFreights,[\s\S]*updateFreight,[\s\S]*\} from '\.\.\/services\/freights\.service';/);
   assert.doesNotMatch(freightsControllerSource, /createResourceByConfig|listResourcesByConfig|updateResourceByConfig|removeResourceByConfig/);
 });

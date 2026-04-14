@@ -50,7 +50,8 @@ export async function validateCargoPayload(body: CargoInput, tenantId: string): 
   return {
     freightId,
     freightDisplayId: freight.display_id,
-    freightRoute: freight.route,
+    freightOrigin: freight.origin,
+    freightDestination: freight.destination,
     companyId,
     companyName: company.trade_name || company.corporate_name,
     cargoNumber,
