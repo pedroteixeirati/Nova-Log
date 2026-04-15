@@ -16,11 +16,13 @@ import {
   FolderKanban,
   WalletCards,
   X,
+  Pickaxe,
 } from 'lucide-react';
 import { NavItem } from '../types';
 import { cn } from '../lib/utils';
 import { useFirebase } from '../context/FirebaseContext';
 import { canAccess } from '../lib/permissions';
+import { canAccessNovalogOperations } from '../features/novalog/utils/novalog.visibility';
 
 interface SidebarProps {
   activeItem: NavItem;
@@ -61,6 +63,7 @@ export default function Sidebar({ activeItem, onNavigate, isMobileOpen, onReques
       icon: BriefcaseBusiness,
       items: [
         { id: 'freights', label: 'Fretes', icon: Route, allowed: canAccess(userProfile, 'freights', 'read') },
+        { id: 'novalogOperations', label: 'Operacao Novalog', icon: Pickaxe, allowed: canAccessNovalogOperations(userProfile) },
         { id: 'cargas', label: 'Cargas', icon: Package, allowed: canAccess(userProfile, 'cargas', 'read') },
         { id: 'contracts', label: 'Contratos', icon: FileText, allowed: canAccess(userProfile, 'contracts', 'read') },
         { id: 'expenses', label: 'Custos operacionais', icon: CreditCard, allowed: canAccess(userProfile, 'expenses', 'read') },

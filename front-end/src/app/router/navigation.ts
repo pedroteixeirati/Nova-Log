@@ -1,5 +1,6 @@
 import { NavItem, UserProfile } from '../../shared/types/common.types';
 import { canAccess, type Section } from '../../lib/permissions';
+import { canAccessNovalogOperations } from '../../features/novalog/utils/novalog.visibility';
 
 export const navItemToPath: Record<NavItem, string> = {
   dashboard: '/',
@@ -13,6 +14,7 @@ export const navItemToPath: Record<NavItem, string> = {
   companies: '/empresas',
   contracts: '/contratos',
   freights: '/fretes',
+  novalogOperations: '/operacao-novalog',
   cargas: '/cargas',
   reports: '/relatorios',
   settings: '/configuracoes',
@@ -39,6 +41,7 @@ export function getFirstAllowedTab(profile: UserProfile): NavItem {
   if (canAccess(profile, 'providers', 'read')) return 'suppliers';
   if (canAccess(profile, 'companies', 'read')) return 'companies';
   if (canAccess(profile, 'freights', 'read')) return 'freights';
+  if (canAccessNovalogOperations(profile)) return 'novalogOperations';
   if (canAccess(profile, 'cargas', 'read')) return 'cargas';
   if (canAccess(profile, 'contracts', 'read')) return 'contracts';
   if (canAccess(profile, 'expenses', 'read')) return 'expenses';
@@ -72,6 +75,8 @@ export function resolveAllowedTab(profile: UserProfile, activeTab: NavItem): Nav
       return canAccess(profile, 'contracts', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'freights':
       return canAccess(profile, 'freights', 'read') ? activeTab : getFirstAllowedTab(profile);
+    case 'novalogOperations':
+      return canAccessNovalogOperations(profile) ? activeTab : getFirstAllowedTab(profile);
     case 'cargas':
       return canAccess(profile, 'cargas', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'reports':
@@ -98,6 +103,7 @@ export const navItemSectionMap: Partial<Record<NavItem, Section>> = {
   companies: 'companies',
   contracts: 'contracts',
   freights: 'freights',
+  novalogOperations: 'freights',
   cargas: 'cargas',
   reports: 'reports',
   settings: 'settings',

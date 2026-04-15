@@ -232,6 +232,36 @@ create table if not exists cargas (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists novalog_operation_entries (
+  id uuid primary key default gen_random_uuid(),
+  display_id bigint,
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  reference_month text not null,
+  week_number integer not null check (week_number between 1 and 4),
+  operation_date text not null,
+  origin_name text not null,
+  destination_name text not null,
+  weight numeric not null default 0,
+  company_rate_per_ton numeric not null default 0,
+  company_gross_amount numeric not null default 0,
+  aggregated_rate_per_ton numeric not null default 0,
+  aggregated_gross_amount numeric not null default 0,
+  ticket_number text,
+  fuel_station_name text,
+  driver_name text,
+  vehicle_label text,
+  driver_share_percent numeric not null default 40,
+  driver_share_amount numeric not null default 0,
+  driver_net_amount numeric not null default 0,
+  notes text,
+  entry_mode text not null default 'standard' check (entry_mode in ('standard', 'batch')),
+  batch_key text,
+  created_by_user_id uuid references users(id) on delete set null,
+  updated_by_user_id uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists expenses (
   id uuid primary key default gen_random_uuid(),
   display_id bigint,
@@ -374,14 +404,26 @@ alter table if exists freights drop constraint if exists freights_billing_type_c
 alter table if exists freights
   add constraint freights_billing_type_check check (billing_type in ('standalone', 'contract_recurring', 'contract_per_trip'));
 alter table if exists freights drop column if exists owner_uid;
-update freights
-set origin = split_part(route, ' x ', 1)
-where (origin is null or origin = '')
-  and route like '% x %';
-update freights
-set destination = split_part(route, ' x ', 2)
-where (destination is null or destination = '')
-  and route like '% x %';
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'freights'
+      and column_name = 'route'
+  ) then
+    update freights
+    set origin = split_part(route, ' x ', 1)
+    where (origin is null or origin = '')
+      and route like '% x %';
+
+    update freights
+    set destination = split_part(route, ' x ', 2)
+    where (destination is null or destination = '')
+      and route like '% x %';
+  end if;
+end $$;
 update freights set origin = coalesce(origin, '') where origin is null;
 update freights set destination = coalesce(destination, '') where destination is null;
 alter table if exists freights drop column if exists route;
@@ -624,6 +666,16 @@ where c.id = numbered.id;
 
 with numbered as (
   select id, row_number() over (partition by tenant_id order by created_at asc, id asc) as next_display_id
+  from novalog_operation_entries
+  where display_id is null
+)
+update novalog_operation_entries n
+set display_id = numbered.next_display_id
+from numbered
+where n.id = numbered.id;
+
+with numbered as (
+  select id, row_number() over (partition by tenant_id order by created_at asc, id asc) as next_display_id
   from expenses
   where display_id is null
 )
@@ -651,6 +703,8 @@ update payables p
 set display_id = numbered.next_display_id
 from numbered
 where p.id = numbered.id;
+
+alter table if exists novalog_operation_entries drop column if exists code;
 
 drop trigger if exists trg_tenants_display_id on tenants;
 create trigger trg_tenants_display_id
@@ -706,6 +760,12 @@ before insert on cargas
 for each row
 execute function assign_tenant_display_id();
 
+drop trigger if exists trg_novalog_operation_entries_display_id on novalog_operation_entries;
+create trigger trg_novalog_operation_entries_display_id
+before insert on novalog_operation_entries
+for each row
+execute function assign_tenant_display_id();
+
 drop trigger if exists trg_expenses_display_id on expenses;
 create trigger trg_expenses_display_id
 before insert on expenses
@@ -752,6 +812,10 @@ create unique index if not exists idx_cargas_tenant_display_id on cargas(tenant_
 create index if not exists idx_cargas_tenant_id on cargas(tenant_id);
 create index if not exists idx_cargas_freight_id on cargas(tenant_id, freight_id);
 create index if not exists idx_cargas_company_id on cargas(tenant_id, company_id);
+create unique index if not exists idx_novalog_entries_tenant_display_id on novalog_operation_entries(tenant_id, display_id) where display_id is not null;
+create index if not exists idx_novalog_entries_tenant_id on novalog_operation_entries(tenant_id);
+create index if not exists idx_novalog_entries_reference_month on novalog_operation_entries(tenant_id, reference_month, week_number);
+create index if not exists idx_novalog_entries_origin_destination on novalog_operation_entries(tenant_id, origin_name, destination_name);
 create unique index if not exists idx_expenses_tenant_display_id on expenses(tenant_id, display_id) where display_id is not null;
 create index if not exists idx_expenses_tenant_id on expenses(tenant_id);
 create unique index if not exists idx_revenues_tenant_display_id on revenues(tenant_id, display_id) where display_id is not null;

@@ -7,9 +7,11 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  panelClassName?: string;
+  contentClassName?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, panelClassName = '', contentClassName = '' }: ModalProps) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -25,7 +27,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-2xl bg-surface-container-lowest rounded-[2.5rem] shadow-2xl overflow-hidden border border-outline-variant"
+            className={`relative w-full max-w-2xl bg-surface-container-lowest rounded-[2.5rem] shadow-2xl overflow-hidden border border-outline-variant ${panelClassName}`}
           >
             <div className="flex items-center justify-between p-8 border-b border-outline-variant">
               <h2 className="text-2xl font-black text-on-surface tracking-tight">{title}</h2>
@@ -36,7 +38,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
                 <X className="w-6 h-6 text-on-surface-variant" />
               </button>
             </div>
-            <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <div className={`p-8 max-h-[70vh] overflow-y-auto custom-scrollbar ${contentClassName}`}>
               {children}
             </div>
           </motion.div>

@@ -13,6 +13,7 @@ const companiesControllerSource = readModule('back-end/modules/companies/control
 const contractsControllerSource = readModule('back-end/modules/contracts/controllers/contracts.controller.ts');
 const expensesControllerSource = readModule('back-end/modules/expenses/controllers/expenses.controller.ts');
 const freightsControllerSource = readModule('back-end/modules/freights/controllers/freights.controller.ts');
+const novalogControllerSource = readModule('back-end/modules/novalog/controllers/novalog.controller.ts');
 const payablesControllerSource = readModule('back-end/modules/payables/controllers/payables.controller.ts');
 const providersControllerSource = readModule('back-end/modules/providers/controllers/providers.controller.ts');
 const resourcesControllerSource = readModule('back-end/modules/resources/controllers/resources.controller.ts');
@@ -35,6 +36,7 @@ test('app HTTP registra todos os routers principais da API', () => {
   assert.match(appSource, /app\.use\('\/api', contractsRouter\)/);
   assert.match(appSource, /app\.use\('\/api', cargasRouter\)/);
   assert.match(appSource, /app\.use\('\/api', freightsRouter\)/);
+  assert.match(appSource, /app\.use\('\/api', novalogRouter\)/);
   assert.match(appSource, /app\.use\('\/api', expensesRouter\)/);
   assert.match(appSource, /app\.use\('\/api', payablesRouter\)/);
   assert.match(appSource, /app\.use\('\/api', providersRouter\)/);
@@ -90,6 +92,20 @@ test('freights expoe CRUD completo com serializer e guardas de recurso', () => {
   assert.match(freightsControllerSource, /serializeFreights\(await listFreights\(req\.auth\)\)/);
   assert.match(freightsControllerSource, /serializeFreight\(await createFreight\(req\.auth, req\.body\)\)/);
   assert.match(freightsControllerSource, /const deleted = await deleteFreight\(req\.auth, req\.params\.id\)/);
+});
+
+test('novalog expoe CRUD proprio e criacao em lote com guardas consistentes', () => {
+  assert.match(novalogControllerSource, /router\.get\('\/novalog\/entries'/);
+  assert.match(novalogControllerSource, /router\.post\('\/novalog\/entries'/);
+  assert.match(novalogControllerSource, /router\.post\('\/novalog\/entries\/batch'/);
+  assert.match(novalogControllerSource, /router\.put\('\/novalog\/entries\/:id'/);
+  assert.match(novalogControllerSource, /router\.delete\('\/novalog\/entries\/:id'/);
+  assert.match(novalogControllerSource, /Sem permissao para visualizar lancamentos Novalog\./);
+  assert.match(novalogControllerSource, /Sem permissao para criar lancamentos Novalog\./);
+  assert.match(novalogControllerSource, /Sem permissao para criar lotes Novalog\./);
+  assert.match(novalogControllerSource, /Sem permissao para editar lancamentos Novalog\./);
+  assert.match(novalogControllerSource, /Sem permissao para excluir lancamentos Novalog\./);
+  assert.match(novalogControllerSource, /novalog_entry_not_found/);
 });
 
 test('cargas expoe CRUD proprio e listagem por frete com guardas consistentes', () => {
