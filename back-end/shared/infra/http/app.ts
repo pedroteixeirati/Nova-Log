@@ -6,6 +6,7 @@ import contractsRouter from '../../../modules/contracts/controllers/contracts.co
 import cargasRouter from '../../../modules/cargas/controllers/cargas.controller';
 import expensesRouter from '../../../modules/expenses/controllers/expenses.controller';
 import freightsRouter from '../../../modules/freights/controllers/freights.controller';
+import novalogRouter from '../../../modules/novalog/controllers/novalog.controller';
 import payablesRouter from '../../../modules/payables/controllers/payables.controller';
 import providersRouter from '../../../modules/providers/controllers/providers.controller';
 import revenuesRouter from '../../../modules/revenues/controllers/revenues.controller';
@@ -31,6 +32,7 @@ app.use('/api', companiesRouter);
 app.use('/api', contractsRouter);
 app.use('/api', cargasRouter);
 app.use('/api', freightsRouter);
+app.use('/api', novalogRouter);
 app.use('/api', expensesRouter);
 app.use('/api', payablesRouter);
 app.use('/api', providersRouter);
