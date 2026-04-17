@@ -33,7 +33,7 @@ describe('NovalogStandardEntryModal', () => {
     );
 
     expect(screen.getByText('Editar lancamento Novalog')).toBeInTheDocument();
-    expect(screen.getByText('Identificador 245')).toBeInTheDocument();
+    expect(screen.queryByText(/Identificador/i)).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('770')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salvar alteracoes' })).toBeInTheDocument();
   });

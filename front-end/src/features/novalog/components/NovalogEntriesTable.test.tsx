@@ -7,7 +7,6 @@ describe('NovalogEntriesTable', () => {
   it('renderiza os lancamentos e dispara as acoes principais', async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
-    const onDuplicate = vi.fn();
     const onDelete = vi.fn();
 
     const entry = {
@@ -30,8 +29,15 @@ describe('NovalogEntriesTable', () => {
     render(
       <NovalogEntriesTable
         entries={[entry]}
+        searchTerm=""
+        originFilter=""
+        destinationFilter=""
+        filteredCount={1}
+        totalCount={1}
+        onSearchChange={() => undefined}
+        onOriginFilterChange={() => undefined}
+        onDestinationFilterChange={() => undefined}
         onEdit={onEdit}
-        onDuplicate={onDuplicate}
         onDelete={onDelete}
       />,
     );
@@ -40,11 +46,9 @@ describe('NovalogEntriesTable', () => {
     expect(screen.getAllByText('Minerbrasil').length).toBeGreaterThan(0);
 
     await user.click(screen.getAllByRole('button', { name: 'Editar #1' })[0]);
-    await user.click(screen.getAllByRole('button', { name: 'Duplicar #1' })[0]);
     await user.click(screen.getAllByRole('button', { name: 'Excluir #1' })[0]);
 
     expect(onEdit).toHaveBeenCalledWith(entry);
-    expect(onDuplicate).toHaveBeenCalledWith(entry);
     expect(onDelete).toHaveBeenCalledWith(entry);
   });
 });
