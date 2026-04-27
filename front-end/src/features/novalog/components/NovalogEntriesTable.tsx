@@ -10,6 +10,7 @@ interface NovalogEntriesTableProps {
   searchTerm: string;
   originFilter: string;
   destinationFilter: string;
+  fuelStationFilter: string;
   filteredCount: number;
   totalCount: number;
   currentPage: number;
@@ -17,6 +18,7 @@ interface NovalogEntriesTableProps {
   onSearchChange: (value: string) => void;
   onOriginFilterChange: (value: string) => void;
   onDestinationFilterChange: (value: string) => void;
+  onFuelStationFilterChange: (value: string) => void;
   onPreviousPage: () => void;
   onNextPage: () => void;
   onEdit: (entry: NovalogEntry) => void;
@@ -32,6 +34,7 @@ export default function NovalogEntriesTable({
   searchTerm,
   originFilter,
   destinationFilter,
+  fuelStationFilter,
   filteredCount,
   totalCount,
   currentPage,
@@ -39,6 +42,7 @@ export default function NovalogEntriesTable({
   onSearchChange,
   onOriginFilterChange,
   onDestinationFilterChange,
+  onFuelStationFilterChange,
   onPreviousPage,
   onNextPage,
   onEdit,
@@ -82,11 +86,13 @@ export default function NovalogEntriesTable({
           searchTerm={searchTerm}
           originFilter={originFilter}
           destinationFilter={destinationFilter}
+          fuelStationFilter={fuelStationFilter}
           filteredCount={filteredCount}
           totalCount={totalCount}
           onSearchChange={onSearchChange}
           onOriginFilterChange={onOriginFilterChange}
           onDestinationFilterChange={onDestinationFilterChange}
+          onFuelStationFilterChange={onFuelStationFilterChange}
         />
       </div>
 

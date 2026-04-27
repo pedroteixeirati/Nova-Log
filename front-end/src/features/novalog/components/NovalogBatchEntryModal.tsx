@@ -7,7 +7,6 @@ import { FieldLabel, FormAlert, FormDatePicker } from '../../../shared/forms';
 import NovalogAutocompleteSelect from './NovalogAutocompleteSelect';
 import {
   getTodayInputDate,
-  novalogDestinationOptions,
   novalogFuelStationOptions,
 } from '../constants/novalog.constants';
 import { NovalogBatchEntryRow, NovalogEntry, NovalogOption } from '../types/novalog.types';
@@ -29,6 +28,7 @@ interface NovalogBatchEntryModalProps {
   isOpen: boolean;
   weekNumber: number;
   originOptions: NovalogOption[];
+  destinationOptions: NovalogOption[];
   isSubmitting?: boolean;
   onClose: () => void;
   onSubmit: (entries: NovalogEntry[]) => void;
@@ -53,6 +53,7 @@ export default function NovalogBatchEntryModal({
   isOpen,
   weekNumber,
   originOptions,
+  destinationOptions,
   isSubmitting = false,
   onClose,
   onSubmit,
@@ -298,7 +299,7 @@ export default function NovalogBatchEntryModal({
                 <div className="grid gap-4 xl:grid-cols-4">
                   <div className="space-y-2">
                     <FieldLabel required>Destino</FieldLabel>
-                    <NovalogAutocompleteSelect value={row.destinationName} onChange={(value) => updateRow(row.id, 'destinationName', value)} options={novalogDestinationOptions} placeholder="Destino" error={rowErrors[row.id]?.destinationName} />
+                    <NovalogAutocompleteSelect value={row.destinationName} onChange={(value) => updateRow(row.id, 'destinationName', value)} options={destinationOptions} placeholder="Destino" error={rowErrors[row.id]?.destinationName} />
                   </div>
                   <Input label="Peso (t)" type="text" inputMode="numeric" value={row.weight} onChange={(event) => updateRow(row.id, 'weight', formatNovalogDecimalInput(event.target.value))} placeholder="0,00" error={rowErrors[row.id]?.weight} />
                   <Input label="Ticket" value={row.ticketNumber} onChange={(event) => updateRow(row.id, 'ticketNumber', event.target.value)} placeholder="Ex: 154230" error={rowErrors[row.id]?.ticketNumber} />
@@ -326,7 +327,7 @@ export default function NovalogBatchEntryModal({
                   {rows.map((row, index) => (
                     <tr key={row.id} className="align-top">
                       <td className="px-4 py-4 min-w-[220px]">
-                        <NovalogAutocompleteSelect value={row.destinationName} onChange={(value) => updateRow(row.id, 'destinationName', value)} options={novalogDestinationOptions} placeholder="Destino" error={rowErrors[row.id]?.destinationName} />
+                        <NovalogAutocompleteSelect value={row.destinationName} onChange={(value) => updateRow(row.id, 'destinationName', value)} options={destinationOptions} placeholder="Destino" error={rowErrors[row.id]?.destinationName} />
                       </td>
                       <td className="px-4 py-4 min-w-[150px]">
                         <Input type="text" inputMode="numeric" value={row.weight} onChange={(event) => updateRow(row.id, 'weight', formatNovalogDecimalInput(event.target.value))} placeholder="0,00" containerClassName="min-w-0" error={rowErrors[row.id]?.weight} />

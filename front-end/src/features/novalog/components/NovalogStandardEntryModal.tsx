@@ -8,7 +8,6 @@ import { FormFieldErrors } from '../../../lib/errors';
 import NovalogAutocompleteSelect from './NovalogAutocompleteSelect';
 import {
   defaultNovalogStandardEntryFormData,
-  novalogDestinationOptions,
   novalogFuelStationOptions,
 } from '../constants/novalog.constants';
 import { NovalogEntry, NovalogEntryMode, NovalogOption, NovalogStandardEntryField, NovalogStandardEntryFormData } from '../types/novalog.types';
@@ -23,6 +22,7 @@ interface NovalogStandardEntryModalProps {
   isOpen: boolean;
   weekNumber: number;
   originOptions: NovalogOption[];
+  destinationOptions: NovalogOption[];
   draftEntry?: NovalogEntry | null;
   mode?: 'create' | 'edit' | 'duplicate';
   isSubmitting?: boolean;
@@ -70,6 +70,7 @@ export default function NovalogStandardEntryModal({
   isOpen,
   weekNumber,
   originOptions,
+  destinationOptions,
   draftEntry,
   mode = 'create',
   isSubmitting = false,
@@ -188,7 +189,7 @@ export default function NovalogStandardEntryModal({
               <NovalogAutocompleteSelect
                 value={formData.destinationName}
                 onChange={(value) => updateField('destinationName', value)}
-                options={novalogDestinationOptions}
+                options={destinationOptions}
                 placeholder="Destino"
                 error={fieldErrors.destinationName}
               />

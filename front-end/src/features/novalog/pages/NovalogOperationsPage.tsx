@@ -6,6 +6,7 @@ import { useFirebase } from '../../../context/FirebaseContext';
 import { canAccess } from '../../../lib/permissions';
 import { queryKeys } from '../../../shared/lib/query-keys';
 import { providersApi } from '../../providers/services/providers.api';
+import { companiesApi } from '../../companies/services/companies.api';
 import { canAccessNovalogOperations } from '../utils/novalog.visibility';
 import { novalogInitialKpis, novalogKpiIcons, novalogWeekOptions } from '../constants/novalog.constants';
 import NovalogEntriesTable from '../components/NovalogEntriesTable';
@@ -29,15 +30,22 @@ export default function NovalogOperationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [originFilter, setOriginFilter] = useState('');
   const [destinationFilter, setDestinationFilter] = useState('');
+  const [fuelStationFilter, setFuelStationFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const canAccessNovalogModule = canAccessNovalogOperations(userProfile);
   const canReadProviders = canAccessNovalogModule && canAccess(userProfile, 'providers', 'read');
+  const canReadCompanies = canAccessNovalogModule && canAccess(userProfile, 'companies', 'read');
   const { entries, isLoading, error } = useNovalogQuery(canAccessNovalogModule);
   const providersQuery = useQuery({
     queryKey: queryKeys.providers.list(),
     queryFn: providersApi.list,
     enabled: canReadProviders,
+  });
+  const companiesQuery = useQuery({
+    queryKey: queryKeys.companies.list(),
+    queryFn: companiesApi.list,
+    enabled: canReadCompanies,
   });
   const { createEntry, createBatch, updateEntry, deleteEntry, isSubmitting } = useNovalogMutations();
   const mutationError = createEntry.error ?? createBatch.error ?? updateEntry.error ?? deleteEntry.error ?? null;
@@ -119,15 +127,16 @@ export default function NovalogOperationsPage() {
         return (
           haystack.includes(searchTerm.toLowerCase()) &&
           entry.originName.toLowerCase().includes(originFilter.toLowerCase()) &&
-          entry.destinationName.toLowerCase().includes(destinationFilter.toLowerCase())
+          entry.destinationName.toLowerCase().includes(destinationFilter.toLowerCase()) &&
+          (entry.fuelStationName ?? '').toLowerCase().includes(fuelStationFilter.toLowerCase())
         );
       }),
-    [destinationFilter, originFilter, searchTerm, weekEntries],
+    [destinationFilter, fuelStationFilter, originFilter, searchTerm, weekEntries],
   );
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedWeek, searchTerm, originFilter, destinationFilter, entries.length]);
+  }, [selectedWeek, searchTerm, originFilter, destinationFilter, fuelStationFilter, entries.length]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / itemsPerPage));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -153,6 +162,28 @@ export default function NovalogOperationsPage() {
 
     return Array.from(optionMap.values()).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
   }, [providersQuery.data]);
+
+  const destinationOptions = useMemo(() => {
+    const optionMap = new Map<string, { value: string; label: string }>();
+
+    (companiesQuery.data ?? [])
+      .slice()
+      .sort((left, right) => {
+        const leftName = left.tradeName || left.corporateName;
+        const rightName = right.tradeName || right.corporateName;
+        return leftName.localeCompare(rightName, 'pt-BR');
+      })
+      .forEach((company) => {
+        const normalized = (company.tradeName || company.corporateName).trim();
+        if (!normalized) return;
+        optionMap.set(normalized.toLocaleLowerCase('pt-BR'), {
+          value: normalized,
+          label: normalized,
+        });
+      });
+
+    return Array.from(optionMap.values()).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
+  }, [companiesQuery.data]);
 
   const dynamicKpis = useMemo(() => {
     const totalWeight = filteredEntries.reduce((sum, entry) => sum + entry.weight, 0);
@@ -285,6 +316,7 @@ export default function NovalogOperationsPage() {
           searchTerm={searchTerm}
           originFilter={originFilter}
           destinationFilter={destinationFilter}
+          fuelStationFilter={fuelStationFilter}
           filteredCount={filteredEntries.length}
           totalCount={weekEntries.length}
           currentPage={safeCurrentPage}
@@ -292,6 +324,7 @@ export default function NovalogOperationsPage() {
           onSearchChange={setSearchTerm}
           onOriginFilterChange={setOriginFilter}
           onDestinationFilterChange={setDestinationFilter}
+          onFuelStationFilterChange={setFuelStationFilter}
           onPreviousPage={() => setCurrentPage((page) => Math.max(1, page - 1))}
           onNextPage={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
           onEdit={openEditModal}
@@ -303,6 +336,7 @@ export default function NovalogOperationsPage() {
         isOpen={isStandardModalOpen}
         weekNumber={selectedWeek}
         originOptions={originOptions}
+        destinationOptions={destinationOptions}
         draftEntry={draftEntry}
         mode={standardModalMode}
         isSubmitting={isSubmitting}
@@ -314,6 +348,7 @@ export default function NovalogOperationsPage() {
         isOpen={isBatchModalOpen}
         weekNumber={selectedWeek}
         originOptions={originOptions}
+        destinationOptions={destinationOptions}
         isSubmitting={isSubmitting}
         onClose={() => setIsBatchModalOpen(false)}
         onSubmit={handleBatchSubmit}
