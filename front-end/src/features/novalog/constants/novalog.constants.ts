@@ -103,14 +103,6 @@ export const novalogMockEntries: NovalogEntry[] = [
   },
 ];
 
-export const novalogDestinationOptions: NovalogOption[] = [
-  { value: 'Gerdau', label: 'Gerdau' },
-  { value: 'Viena', label: 'Viena' },
-  { value: 'Cosimat', label: 'Cosimat' },
-  { value: 'Multifer', label: 'Multifer' },
-  { value: 'Minasfer', label: 'Minasfer' },
-];
-
 export const novalogFuelStationOptions: NovalogOption[] = [
   { value: 'Campeao', label: 'Posto Campeao' },
   { value: 'Santa Helena', label: 'Posto Santa Helena' },

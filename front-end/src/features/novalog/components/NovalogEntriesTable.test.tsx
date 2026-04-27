@@ -32,6 +32,7 @@ describe('NovalogEntriesTable', () => {
         searchTerm=""
         originFilter=""
         destinationFilter=""
+        fuelStationFilter=""
         filteredCount={1}
         totalCount={1}
         currentPage={1}
@@ -39,6 +40,7 @@ describe('NovalogEntriesTable', () => {
         onSearchChange={() => undefined}
         onOriginFilterChange={() => undefined}
         onDestinationFilterChange={() => undefined}
+        onFuelStationFilterChange={() => undefined}
         onPreviousPage={() => undefined}
         onNextPage={() => undefined}
         onEdit={onEdit}

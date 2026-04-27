@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NovalogAutocompleteSelect from './NovalogAutocompleteSelect';
 
@@ -61,5 +61,41 @@ describe('NovalogAutocompleteSelect', () => {
     await user.click(screen.getByRole('button', { name: 'Gerdau' }));
 
     expect(handleChange).toHaveBeenLastCalledWith('Gerdau');
+  });
+
+  it('seleciona a sugestao destacada com Tab e mantem a navegacao do formulario', async () => {
+    const user = userEvent.setup();
+    const handleChange = vi.fn();
+
+    function TestHarness() {
+      const [value, setValue] = React.useState('');
+
+      return (
+        <>
+          <NovalogAutocompleteSelect
+            value={value}
+            onChange={(nextValue) => {
+              setValue(nextValue);
+              handleChange(nextValue);
+            }}
+            options={options}
+            placeholder="Destino"
+          />
+          <input aria-label="Proximo campo" />
+        </>
+      );
+    }
+
+    render(<TestHarness />);
+
+    const input = screen.getByPlaceholderText('Destino');
+    const nextInput = screen.getByLabelText('Proximo campo');
+
+    await user.click(input);
+    await user.type(input, 'Ger');
+    await user.tab();
+
+    await waitFor(() => expect(handleChange).toHaveBeenLastCalledWith('Gerdau'));
+    expect(nextInput).toHaveFocus();
   });
 });

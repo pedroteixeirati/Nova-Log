@@ -26,6 +26,7 @@ describe('NovalogStandardEntryModal', () => {
         isOpen
         weekNumber={1}
         originOptions={[{ value: 'Minerbrasil', label: 'Minerbrasil' }]}
+        destinationOptions={[{ value: 'Gerdau', label: 'Gerdau' }]}
         draftEntry={baseEntry}
         mode="edit"
         onClose={() => undefined}
@@ -45,6 +46,7 @@ describe('NovalogStandardEntryModal', () => {
         isOpen
         weekNumber={1}
         originOptions={[{ value: 'Minerbrasil', label: 'Minerbrasil' }]}
+        destinationOptions={[{ value: 'Gerdau', label: 'Gerdau' }]}
         draftEntry={baseEntry}
         mode="duplicate"
         onClose={() => undefined}

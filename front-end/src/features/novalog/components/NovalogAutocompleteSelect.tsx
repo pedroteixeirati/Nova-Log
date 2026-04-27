@@ -22,6 +22,7 @@ export default function NovalogAutocompleteSelect({
 }: NovalogAutocompleteSelectProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const shouldSkipNextBlurCommitRef = useRef(false);
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -72,10 +73,14 @@ export default function NovalogAutocompleteSelect({
 
   const applyOption = (option: CustomSelectOption | undefined) => {
     if (!option) return;
+    shouldSkipNextBlurCommitRef.current = true;
     onChange(option.value);
     setQuery(option.label);
     setIsFocused(false);
   };
+
+  const highlightedOption = filteredOptions[activeIndex] ?? filteredOptions[0];
+  const hasTypedQuery = query.trim().length > 0;
 
   return (
     <div ref={rootRef} className={cn('relative min-w-0', className)}>
@@ -99,6 +104,11 @@ export default function NovalogAutocompleteSelect({
           }}
           aria-invalid={Boolean(error)}
           onBlur={(event) => {
+            if (shouldSkipNextBlurCommitRef.current) {
+              shouldSkipNextBlurCommitRef.current = false;
+              return;
+            }
+
             if (rootRef.current?.contains(event.relatedTarget as Node | null)) {
               return;
             }
@@ -127,6 +137,11 @@ export default function NovalogAutocompleteSelect({
                 return;
               }
 
+              if (hasTypedQuery && highlightedOption) {
+                applyOption(highlightedOption);
+                return;
+              }
+
               commitFreeText(query);
               return;
             }
@@ -134,6 +149,11 @@ export default function NovalogAutocompleteSelect({
             if (event.key === 'Tab') {
               if (exactMatch) {
                 applyOption(exactMatch);
+                return;
+              }
+
+              if (hasTypedQuery && highlightedOption) {
+                applyOption(highlightedOption);
                 return;
               }
 
