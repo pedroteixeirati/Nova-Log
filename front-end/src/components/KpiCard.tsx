@@ -35,8 +35,30 @@ function getValuePresentation(value: string | number) {
   const isCurrency = normalizedValue.startsWith('R$');
   const isDateLike = /^\d{2}\/\d{2}\/\d{4}$/.test(normalizedValue);
   const isShortNumeric = /^\d+$/.test(normalizedValue);
+  const compactLength = normalizedValue.replace(/^R\$\s*/, '').replace(/\s/g, '').length;
 
   if (isCurrency) {
+    if (compactLength >= 16) {
+      return {
+        sizeClass: 'text-[1.05rem] sm:text-[1.18rem] xl:text-[1.32rem]',
+        trackingClass: 'tracking-[-0.02em]',
+      };
+    }
+
+    if (compactLength >= 13) {
+      return {
+        sizeClass: 'text-[1.15rem] sm:text-[1.32rem] xl:text-[1.55rem]',
+        trackingClass: 'tracking-[-0.025em]',
+      };
+    }
+
+    if (compactLength >= 10) {
+      return {
+        sizeClass: 'text-[1.28rem] sm:text-[1.45rem] xl:text-[1.75rem]',
+        trackingClass: 'tracking-[-0.03em]',
+      };
+    }
+
     return {
       sizeClass: 'text-[1.45rem] sm:text-[1.65rem] xl:text-[2rem]',
       trackingClass: 'tracking-[-0.035em]',
@@ -192,7 +214,7 @@ export default function KpiCard({
             <span className="shrink-0 text-[0.82rem] font-bold text-on-surface-variant sm:text-[0.95rem]">{currencyParts.prefix}</span>
             <p
               className={cn(
-                'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-black leading-[0.92] text-on-surface',
+                'min-w-0 whitespace-nowrap font-black leading-[0.92] text-on-surface',
                 valuePresentation.sizeClass,
                 valuePresentation.trackingClass,
                 valueClassName,
@@ -204,7 +226,7 @@ export default function KpiCard({
         ) : (
           <p
             className={cn(
-              'overflow-hidden text-ellipsis whitespace-nowrap font-black leading-[0.92] text-on-surface',
+              'whitespace-nowrap font-black leading-[0.92] text-on-surface',
               valuePresentation.sizeClass,
               valuePresentation.trackingClass,
               valueClassName,

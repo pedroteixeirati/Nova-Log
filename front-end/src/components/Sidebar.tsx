@@ -18,6 +18,7 @@ import {
   X,
   Pickaxe,
   Layers3,
+  ReceiptText,
 } from 'lucide-react';
 import { NavItem } from '../types';
 import { cn } from '../lib/utils';
@@ -40,7 +41,10 @@ export default function Sidebar({ activeItem, onNavigate, isMobileOpen, onReques
       id: 'novalog',
       label: 'Novalog',
       icon: Pickaxe,
-      items: [{ id: 'novalogOperations', label: 'Lan\u00e7amentos', icon: Layers3, allowed: canAccessNovalogOperations(userProfile) }],
+      items: [
+        { id: 'novalogOperations', label: 'Lancamentos', icon: Layers3, allowed: canAccessNovalogOperations(userProfile) },
+        { id: 'novalogBillings', label: 'Faturamentos', icon: ReceiptText, allowed: canAccessNovalogOperations(userProfile) },
+      ],
     },
     {
       id: 'registry',
@@ -80,9 +84,9 @@ export default function Sidebar({ activeItem, onNavigate, isMobileOpen, onReques
       label: 'Gestao',
       icon: WalletCards,
       items: [
-        { id: 'revenues', label: 'Contas a receber', icon: WalletCards, allowed: canAccess(userProfile, 'revenues', 'read') },
-        { id: 'payables', label: 'Contas a pagar', icon: CreditCard, allowed: canAccess(userProfile, 'payables', 'read') },
-        { id: 'reports', label: 'Relatorios', icon: BarChart3, allowed: canAccess(userProfile, 'reports', 'read') },
+        { id: 'revenues', label: 'Contas a receber', icon: WalletCards, allowed: true },
+        { id: 'payables', label: 'Contas a pagar', icon: CreditCard, allowed: true },
+        { id: 'reports', label: 'Relatorios', icon: BarChart3, allowed: true },
       ],
     },
     {
@@ -100,7 +104,7 @@ export default function Sidebar({ activeItem, onNavigate, isMobileOpen, onReques
   const sections = allSections
     // TEMPORARIO: durante a operacao atual vamos manter no menu apenas Novalog e Cadastros.
     // Quando reabrirmos a navegacao completa, basta ajustar/remover este filtro centralizado.
-    .filter((section) => ['registry', 'novalog'].includes(section.id))
+    .filter((section) => ['registry', 'novalog', 'management'].includes(section.id))
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => item.allowed),

@@ -263,6 +263,8 @@ export function listRevenuesByTenant(tenantId: string) {
             contract_id,
             contract_name,
             freight_id,
+            novalog_billing_id,
+            novalog_billing_item_id,
             competence_month,
             competence_year,
             competence_label,
@@ -300,6 +302,8 @@ export function markRevenueAsCharged(chargeReference: string, actorUserId: strin
                contract_id,
                contract_name,
                freight_id,
+               novalog_billing_id,
+               novalog_billing_item_id,
                competence_month,
                competence_year,
                competence_label,
@@ -333,6 +337,8 @@ export function markRevenueAsReceived(actorUserId: string | undefined, revenueId
                contract_id,
                contract_name,
                freight_id,
+               novalog_billing_id,
+               novalog_billing_item_id,
                competence_month,
                competence_year,
                competence_label,
@@ -365,6 +371,8 @@ export function markRevenueAsOverdue(actorUserId: string | undefined, revenueId:
                contract_id,
                contract_name,
                freight_id,
+               novalog_billing_id,
+               novalog_billing_item_id,
                competence_month,
                competence_year,
                competence_label,
@@ -378,5 +386,40 @@ export function markRevenueAsOverdue(actorUserId: string | undefined, revenueId:
                received_at,
                created_at`,
     [actorUserId, revenueId, tenantId]
+  );
+}
+
+export function updateNovalogBillingRevenueStatus(revenueId: string, tenantId: string, status: 'pending' | 'billed' | 'received' | 'overdue' | 'canceled', actorUserId?: string) {
+  return pool.query<RevenueRow>(
+    `update revenues
+     set status = $1,
+         received_at = case when $1 = 'received' then coalesce(received_at, now()) else received_at end,
+         updated_by_user_id = $2,
+         updated_at = now()
+     where id = $3
+       and tenant_id = $4
+       and source_type = 'novalog_billing_item'
+     returning id,
+               display_id,
+               company_id,
+               company_name,
+               contract_id,
+               contract_name,
+               freight_id,
+               novalog_billing_id,
+               novalog_billing_item_id,
+               competence_month,
+               competence_year,
+               competence_label,
+               description,
+               amount,
+               due_date,
+               status,
+               source_type,
+               charge_reference,
+               charge_generated_at,
+               received_at,
+               created_at`,
+    [status, actorUserId || null, revenueId, tenantId]
   );
 }

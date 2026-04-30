@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileText,
   FolderKanban,
+  Layers3,
   LayoutDashboard,
   Route,
   Settings,
@@ -13,6 +14,7 @@ import {
   Truck,
   Users,
   WalletCards,
+  ReceiptText,
 } from 'lucide-react';
 import { NavItem, UserProfile } from '../../../shared/types/common.types';
 import { canAccess } from '../../../lib/permissions';
@@ -76,14 +78,23 @@ export function buildNavigationSections(userProfile: UserProfile | null): Naviga
       ]),
     },
     {
+      id: 'novalog',
+      label: 'Novalog',
+      icon: ReceiptText,
+      items: compactItems([
+        userProfile?.tenantSlug === 'novalog' ? navItem('novalogOperations', 'Lancamentos', Layers3) : null,
+        userProfile?.tenantSlug === 'novalog' ? navItem('novalogBillings', 'Faturamentos', ReceiptText) : null,
+      ]),
+    },
+    {
       id: 'management',
       label: 'Gestao',
       icon: WalletCards,
-      items: compactItems([
-        canAccess(userProfile, 'revenues', 'read') ? navItem('revenues', 'Contas a receber', WalletCards) : null,
-        canAccess(userProfile, 'payables', 'read') ? navItem('payables', 'Contas a pagar', CreditCard) : null,
-        canAccess(userProfile, 'reports', 'read') ? navItem('reports', 'Relatorios', BarChart3) : null,
-      ]),
+      items: [
+        navItem('revenues', 'Contas a receber', WalletCards),
+        navItem('payables', 'Contas a pagar', CreditCard),
+        navItem('reports', 'Relatorios', BarChart3),
+      ],
     },
     {
       id: 'admin',

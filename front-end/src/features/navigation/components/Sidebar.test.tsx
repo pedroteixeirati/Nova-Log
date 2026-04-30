@@ -55,4 +55,20 @@ describe('Sidebar', () => {
 
     expect(screen.getByTestId('location-display')).toHaveTextContent('/veiculos');
   });
+
+  it('exibe o menu de gestao financeira para qualquer perfil', () => {
+    mockUseAuth.mockReturnValue({ userProfile: makeProfile('viewer') });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Sidebar activeItem="dashboard" />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /gestao/i }));
+
+    expect(screen.getByRole('button', { name: /contas a receber/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /contas a pagar/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /relatorios/i })).toBeInTheDocument();
+  });
 });

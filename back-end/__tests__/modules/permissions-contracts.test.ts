@@ -29,7 +29,7 @@ test('front-end protege acesso de custos operacionais e contas a pagar por perfi
 
 test('App resolve navegacao respeitando as novas secoes operacionais e financeiras', () => {
   assert.match(navigationSource, /case 'expenses':[\s\S]*canAccess\(profile, 'expenses', 'read'\)/);
-  assert.match(navigationSource, /case 'payables':[\s\S]*canAccess\(profile, 'payables', 'read'\)/);
+  assert.match(navigationSource, /case 'revenues':\s*case 'payables':\s*case 'reports':\s*return activeTab;/);
 });
 
 test('back-end mantem custos operacionais com ownership operacional e payables com ownership financeiro', () => {

@@ -6,6 +6,8 @@ export interface Revenue {
   contractId: string;
   contractName: string;
   freightId?: string;
+  novalogBillingId?: string;
+  novalogBillingItemId?: string;
   competenceMonth: number;
   competenceYear: number;
   competenceLabel: string;
@@ -13,7 +15,7 @@ export interface Revenue {
   amount: number;
   dueDate: string;
   status: 'pending' | 'billed' | 'received' | 'overdue' | 'canceled';
-  sourceType: 'contract' | 'freight' | 'manual';
+  sourceType: 'contract' | 'freight' | 'manual' | 'novalog_billing_item';
   chargeReference?: string;
   chargeGeneratedAt?: string;
   receivedAt?: string;

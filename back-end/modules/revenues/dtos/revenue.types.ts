@@ -6,6 +6,8 @@ export type RevenueRow = {
   contract_id: string | null;
   contract_name: string | null;
   freight_id: string | null;
+  novalog_billing_id: string | null;
+  novalog_billing_item_id: string | null;
   competence_month: number;
   competence_year: number;
   competence_label: string;
@@ -13,7 +15,7 @@ export type RevenueRow = {
   amount: string | number;
   due_date: string;
   status: 'pending' | 'billed' | 'received' | 'overdue' | 'canceled';
-  source_type: 'contract' | 'freight' | 'manual';
+  source_type: 'contract' | 'freight' | 'manual' | 'novalog_billing_item';
   charge_reference: string | null;
   charge_generated_at: string | null;
   received_at: string | null;
@@ -53,14 +55,17 @@ export type FreightLinkedContractRow = {
 };
 
 export function mapRevenue(row: RevenueRow) {
+  const isNovalogBillingItem = row.source_type === 'novalog_billing_item';
   return {
     id: row.id,
     displayId: row.display_id !== null && row.display_id !== undefined ? Number(row.display_id) : undefined,
     companyId: row.company_id || '',
     companyName: row.company_name || 'Fretes avulsos',
     contractId: row.contract_id || '',
-    contractName: row.contract_name || 'Frete avulso',
+    contractName: isNovalogBillingItem ? row.description : row.contract_name || 'Frete avulso',
     freightId: row.freight_id || undefined,
+    novalogBillingId: row.novalog_billing_id || undefined,
+    novalogBillingItemId: row.novalog_billing_item_id || undefined,
     competenceMonth: row.competence_month,
     competenceYear: row.competence_year,
     competenceLabel: row.competence_label,

@@ -28,13 +28,13 @@ export default function PayablesFilters({
           <input
             type="text"
             placeholder="Buscar conta, fornecedor ou veiculo..."
-            className="min-w-[260px] rounded-full border-none bg-surface py-2 pl-10 pr-4 text-sm font-medium text-on-surface-variant focus:ring-2 focus:ring-primary/20"
+            className="min-w-[260px] rounded-full bg-surface py-3 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-primary/5 transition focus:ring-2 focus:ring-primary/20"
             value={searchTerm}
             onChange={(event) => onSearchChange(event.target.value)}
           />
         </div>
 
-        <div className="flex items-center gap-2 rounded-full bg-surface px-4 py-2">
+        <div className="flex items-center gap-2 rounded-full bg-surface px-4 py-2 ring-1 ring-primary/5">
           <CustomSelect
             value={statusFilter}
             onChange={(value) => onStatusChange(value as 'all' | Payable['status'])}

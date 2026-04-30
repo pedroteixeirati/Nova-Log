@@ -301,6 +301,8 @@ create table if not exists revenues (
   contract_id uuid references contracts(id) on delete cascade,
   contract_name text,
   freight_id uuid references freights(id) on delete cascade,
+  novalog_billing_id uuid,
+  novalog_billing_item_id uuid,
   competence_month integer not null check (competence_month between 1 and 12),
   competence_year integer not null,
   competence_label text not null,
@@ -308,7 +310,7 @@ create table if not exists revenues (
   amount numeric not null default 0,
   due_date text not null,
   status text not null default 'pending' check (status in ('pending', 'billed', 'received', 'overdue', 'canceled')),
-  source_type text not null default 'contract' check (source_type in ('contract', 'freight', 'manual')),
+  source_type text not null default 'contract' check (source_type in ('contract', 'freight', 'manual', 'novalog_billing_item')),
   charge_reference text,
   charge_generated_at timestamptz,
   received_at timestamptz,
@@ -317,6 +319,43 @@ create table if not exists revenues (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (tenant_id, contract_id, competence_month, competence_year)
+);
+
+create table if not exists novalog_billings (
+  id uuid primary key default gen_random_uuid(),
+  display_id bigint,
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  company_id uuid not null references companies(id) on delete restrict,
+  company_name text not null,
+  billing_date text not null,
+  due_date text not null,
+  status text not null default 'draft' check (status in ('draft', 'open', 'partially_received', 'received', 'overdue', 'canceled')),
+  notes text,
+  created_by_user_id uuid references users(id) on delete set null,
+  updated_by_user_id uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists novalog_billing_items (
+  id uuid primary key default gen_random_uuid(),
+  display_id bigint,
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  billing_id uuid not null references novalog_billings(id) on delete cascade,
+  cte_number text not null,
+  cte_key text,
+  issue_date text,
+  origin_name text,
+  destination_name text,
+  amount numeric not null default 0,
+  status text not null default 'pending' check (status in ('pending', 'billed', 'received', 'overdue', 'canceled')),
+  received_at timestamptz,
+  notes text,
+  linked_revenue_id uuid references revenues(id) on delete set null,
+  created_by_user_id uuid references users(id) on delete set null,
+  updated_by_user_id uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists payables (
@@ -347,6 +386,8 @@ alter table if exists revenues add column if not exists charge_reference text;
 alter table if exists revenues add column if not exists charge_generated_at timestamptz;
 alter table if exists revenues add column if not exists received_at timestamptz;
 alter table if exists revenues add column if not exists freight_id uuid references freights(id) on delete cascade;
+alter table if exists revenues add column if not exists novalog_billing_id uuid;
+alter table if exists revenues add column if not exists novalog_billing_item_id uuid;
 alter table if exists revenues alter column company_id drop not null;
 alter table if exists revenues alter column company_name drop not null;
 alter table if exists revenues alter column contract_id drop not null;
@@ -354,12 +395,26 @@ alter table if exists revenues alter column contract_name drop not null;
 alter table if exists revenues drop constraint if exists revenues_status_check;
 alter table if exists revenues
   add constraint revenues_status_check check (status in ('pending', 'billed', 'received', 'overdue', 'canceled'));
+alter table if exists revenues drop constraint if exists revenues_source_type_check;
+alter table if exists revenues
+  add constraint revenues_source_type_check check (source_type in ('contract', 'freight', 'manual', 'novalog_billing_item'));
+alter table if exists revenues drop constraint if exists revenues_novalog_billing_id_fkey;
+alter table if exists revenues
+  add constraint revenues_novalog_billing_id_fkey
+  foreign key (novalog_billing_id) references novalog_billings(id) on delete set null;
+alter table if exists revenues drop constraint if exists revenues_novalog_billing_item_id_fkey;
+alter table if exists revenues
+  add constraint revenues_novalog_billing_item_id_fkey
+  foreign key (novalog_billing_item_id) references novalog_billing_items(id) on delete set null;
 create unique index if not exists idx_revenues_contract_competence
   on revenues(tenant_id, contract_id, competence_month, competence_year)
   where contract_id is not null;
 create unique index if not exists idx_revenues_freight_id
   on revenues(freight_id)
   where freight_id is not null;
+create unique index if not exists idx_revenues_novalog_billing_item_id
+  on revenues(novalog_billing_item_id)
+  where novalog_billing_item_id is not null;
 
 alter table if exists vehicles add column if not exists tenant_id uuid references tenants(id) on delete cascade;
 alter table if exists vehicles add column if not exists display_id bigint;
@@ -774,6 +829,18 @@ before insert on novalog_operation_entries
 for each row
 execute function assign_tenant_display_id();
 
+drop trigger if exists trg_novalog_billings_display_id on novalog_billings;
+create trigger trg_novalog_billings_display_id
+before insert on novalog_billings
+for each row
+execute function assign_tenant_display_id();
+
+drop trigger if exists trg_novalog_billing_items_display_id on novalog_billing_items;
+create trigger trg_novalog_billing_items_display_id
+before insert on novalog_billing_items
+for each row
+execute function assign_tenant_display_id();
+
 drop trigger if exists trg_expenses_display_id on expenses;
 create trigger trg_expenses_display_id
 before insert on expenses
@@ -824,6 +891,16 @@ create unique index if not exists idx_novalog_entries_tenant_display_id on noval
 create index if not exists idx_novalog_entries_tenant_id on novalog_operation_entries(tenant_id);
 create index if not exists idx_novalog_entries_reference_month on novalog_operation_entries(tenant_id, reference_month, week_number);
 create index if not exists idx_novalog_entries_origin_destination on novalog_operation_entries(tenant_id, origin_name, destination_name);
+create unique index if not exists idx_novalog_billings_tenant_display_id on novalog_billings(tenant_id, display_id) where display_id is not null;
+create index if not exists idx_novalog_billings_tenant_id on novalog_billings(tenant_id);
+create index if not exists idx_novalog_billings_company_id on novalog_billings(tenant_id, company_id);
+create index if not exists idx_novalog_billings_status on novalog_billings(tenant_id, status);
+create index if not exists idx_novalog_billings_due_date on novalog_billings(tenant_id, due_date);
+create unique index if not exists idx_novalog_billing_items_tenant_display_id on novalog_billing_items(tenant_id, display_id) where display_id is not null;
+create index if not exists idx_novalog_billing_items_billing_id on novalog_billing_items(tenant_id, billing_id);
+create index if not exists idx_novalog_billing_items_status on novalog_billing_items(tenant_id, status);
+create unique index if not exists idx_novalog_billing_items_tenant_cte_number on novalog_billing_items(tenant_id, cte_number)
+  where cte_number is not null and cte_number <> '' and status <> 'canceled';
 create unique index if not exists idx_expenses_tenant_display_id on expenses(tenant_id, display_id) where display_id is not null;
 create index if not exists idx_expenses_tenant_id on expenses(tenant_id);
 create unique index if not exists idx_revenues_tenant_display_id on revenues(tenant_id, display_id) where display_id is not null;
