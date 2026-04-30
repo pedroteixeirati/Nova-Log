@@ -23,6 +23,7 @@ import {
   upsertFreightRevenue,
 } from '../repositories/revenues.repository';
 import { mapRevenue } from '../dtos/revenue.types';
+import { syncNovalogBillingItemFromRevenue } from '../../novalog/services/novalog-billings.service';
 
 function formatMonthStartDate(referenceDate: Date) {
   return startOfMonth(referenceDate).toISOString().slice(0, 10);
@@ -209,15 +210,24 @@ export async function generateTenantRevenues(tenantId?: string, actorUserId?: st
 export async function chargeRevenue(revenueId: string, tenantId?: string, actorUserId?: string) {
   const chargeReference = `COB-${new Date().getFullYear()}-${revenueId.slice(0, 8).toUpperCase()}`;
   const result = await markRevenueAsCharged(chargeReference, actorUserId, revenueId, tenantId);
+  if (result.rows[0]?.source_type === 'novalog_billing_item') {
+    await syncNovalogBillingItemFromRevenue(tenantId, revenueId, 'billed', actorUserId);
+  }
   return result.rows[0] ? mapRevenue(result.rows[0]) : null;
 }
 
 export async function receiveRevenue(revenueId: string, tenantId?: string, actorUserId?: string) {
   const result = await markRevenueAsReceived(actorUserId, revenueId, tenantId);
+  if (result.rows[0]?.source_type === 'novalog_billing_item') {
+    await syncNovalogBillingItemFromRevenue(tenantId, revenueId, 'received', actorUserId);
+  }
   return result.rows[0] ? mapRevenue(result.rows[0]) : null;
 }
 
 export async function overdueRevenue(revenueId: string, tenantId?: string, actorUserId?: string) {
   const result = await markRevenueAsOverdue(actorUserId, revenueId, tenantId);
+  if (result.rows[0]?.source_type === 'novalog_billing_item') {
+    await syncNovalogBillingItemFromRevenue(tenantId, revenueId, 'overdue', actorUserId);
+  }
   return result.rows[0] ? mapRevenue(result.rows[0]) : null;
 }

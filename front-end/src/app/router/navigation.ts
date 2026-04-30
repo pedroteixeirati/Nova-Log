@@ -15,6 +15,7 @@ export const navItemToPath: Record<NavItem, string> = {
   contracts: '/contratos',
   freights: '/fretes',
   novalogOperations: '/novalog/lancamentos',
+  novalogBillings: '/novalog/faturamentos',
   cargas: '/cargas',
   reports: '/relatorios',
   settings: '/configuracoes',
@@ -42,15 +43,13 @@ export function getFirstAllowedTab(profile: UserProfile): NavItem {
   if (canAccess(profile, 'companies', 'read')) return 'companies';
   if (canAccess(profile, 'freights', 'read')) return 'freights';
   if (canAccessNovalogOperations(profile)) return 'novalogOperations';
+  if (canAccessNovalogOperations(profile)) return 'novalogBillings';
   if (canAccess(profile, 'cargas', 'read')) return 'cargas';
   if (canAccess(profile, 'contracts', 'read')) return 'contracts';
   if (canAccess(profile, 'expenses', 'read')) return 'expenses';
-  if (canAccess(profile, 'revenues', 'read')) return 'revenues';
-  if (canAccess(profile, 'payables', 'read')) return 'payables';
-  if (canAccess(profile, 'reports', 'read')) return 'reports';
   if (canAccess(profile, 'tenantProfile', 'read')) return 'tenantProfile';
   if (canAccess(profile, 'settings', 'read')) return 'settings';
-  return 'dashboard';
+  return 'revenues';
 }
 
 export function resolveAllowedTab(profile: UserProfile, activeTab: NavItem): NavItem {
@@ -60,9 +59,9 @@ export function resolveAllowedTab(profile: UserProfile, activeTab: NavItem): Nav
     case 'tenantProfile':
       return canAccess(profile, 'tenantProfile', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'revenues':
-      return canAccess(profile, 'revenues', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'payables':
-      return canAccess(profile, 'payables', 'read') ? activeTab : getFirstAllowedTab(profile);
+    case 'reports':
+      return activeTab;
     case 'expenses':
       return canAccess(profile, 'expenses', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'vehicles':
@@ -77,10 +76,10 @@ export function resolveAllowedTab(profile: UserProfile, activeTab: NavItem): Nav
       return canAccess(profile, 'freights', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'novalogOperations':
       return canAccessNovalogOperations(profile) ? activeTab : getFirstAllowedTab(profile);
+    case 'novalogBillings':
+      return canAccessNovalogOperations(profile) ? activeTab : getFirstAllowedTab(profile);
     case 'cargas':
       return canAccess(profile, 'cargas', 'read') ? activeTab : getFirstAllowedTab(profile);
-    case 'reports':
-      return canAccess(profile, 'reports', 'read') ? activeTab : getFirstAllowedTab(profile);
     case 'settings':
       return canAccess(profile, 'settings', 'read') ? activeTab : getFirstAllowedTab(profile);
     default:
@@ -104,6 +103,7 @@ export const navItemSectionMap: Partial<Record<NavItem, Section>> = {
   contracts: 'contracts',
   freights: 'freights',
   novalogOperations: 'freights',
+  novalogBillings: 'revenues',
   cargas: 'cargas',
   reports: 'reports',
   settings: 'settings',

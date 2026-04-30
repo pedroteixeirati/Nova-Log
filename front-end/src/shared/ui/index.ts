@@ -1,5 +1,7 @@
 export { default as Alert } from './Alert';
 export { default as Button } from './Button';
+export { default as DataTable } from './DataTable';
+export type { DataTableColumn } from './DataTable';
 export { default as EmptyState } from './EmptyState';
 export { default as Input } from './Input';
 export { default as KpiCard } from './KpiCard';

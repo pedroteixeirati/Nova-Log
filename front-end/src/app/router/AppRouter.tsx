@@ -14,6 +14,7 @@ import Contracts from '../../pages/Contracts';
 import Cargas from '../../pages/Cargas';
 import Freights from '../../pages/Freights';
 import NovalogOperations from '../../pages/NovalogOperations';
+import NovalogBillings from '../../pages/NovalogBillings';
 import Settings from '../../pages/Settings';
 import Support from '../../pages/Support';
 import LoginPage from '../../features/auth/pages/LoginPage';
@@ -64,6 +65,7 @@ export default function AppRouter() {
             <Route path="/contratos" element={<Contracts />} />
             <Route path="/fretes" element={<Freights />} />
             <Route path="/novalog/lancamentos" element={<NovalogOperations />} />
+            <Route path="/novalog/faturamentos" element={<NovalogBillings />} />
             <Route path="/cargas" element={<Cargas />} />
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/configuracoes" element={<Settings />} />

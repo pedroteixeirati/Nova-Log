@@ -28,4 +28,9 @@ export const queryKeys = {
     all: ['novalog'] as const,
     list: () => ['novalog', 'list'] as const,
   },
+  novalogBillings: {
+    all: ['novalogBillings'] as const,
+    list: () => ['novalogBillings', 'list'] as const,
+    detail: (id: string) => ['novalogBillings', 'detail', id] as const,
+  },
 } as const;

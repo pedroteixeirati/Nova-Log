@@ -11,6 +11,7 @@ export type NavItem =
   | 'contracts'
   | 'freights'
   | 'novalogOperations'
+  | 'novalogBillings'
   | 'cargas'
   | 'reports'
   | 'settings'

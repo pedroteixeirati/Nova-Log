@@ -29,7 +29,9 @@ describe('router navigation helpers', () => {
     expect(getFirstAllowedPath(makeProfile('financial'))).toBe('/veiculos');
   });
 
-  it('redireciona aba proibida para a primeira permitida', () => {
-    expect(resolveAllowedTab(makeProfile('viewer'), 'reports')).toBe('vehicles');
+  it('mantem abas financeiras liberadas no front para qualquer perfil', () => {
+    expect(resolveAllowedTab(makeProfile('viewer'), 'revenues')).toBe('revenues');
+    expect(resolveAllowedTab(makeProfile('viewer'), 'payables')).toBe('payables');
+    expect(resolveAllowedTab(makeProfile('viewer'), 'reports')).toBe('reports');
   });
 });

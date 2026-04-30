@@ -14,8 +14,149 @@ import {
   novalogPermissions,
   updateNovalogEntry,
 } from '../services/novalog.service';
+import {
+  changeNovalogBillingItemStatus,
+  closeNovalogBilling,
+  createNovalogBilling,
+  getNovalogBilling,
+  listNovalogBillings,
+  novalogBillingPermissions,
+  updateNovalogBilling,
+} from '../services/novalog-billings.service';
 
 const router = express.Router();
+
+router.get('/novalog/billings', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('read', novalogBillingPermissions, req.auth?.role), 'Sem permissao para visualizar faturamentos Novalog.')) {
+      return;
+    }
+
+    res.json(await listNovalogBillings(req.auth));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/novalog/billings/:id', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('read', novalogBillingPermissions, req.auth?.role), 'Sem permissao para visualizar faturamentos Novalog.')) {
+      return;
+    }
+
+    const billing = await getNovalogBilling(req.auth, req.params.id);
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('Faturamento nao encontrado.', 'novalog_billing_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/novalog/billings', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('create', novalogBillingPermissions, req.auth?.role), 'Sem permissao para criar faturamentos Novalog.')) {
+      return;
+    }
+
+    res.status(201).json(await createNovalogBilling(req.auth, req.body as Record<string, unknown>));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/novalog/billings/:id', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('update', novalogBillingPermissions, req.auth?.role), 'Sem permissao para editar faturamentos Novalog.')) {
+      return;
+    }
+
+    const billing = await updateNovalogBilling(req.auth, req.params.id, req.body as Record<string, unknown>);
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('Faturamento nao encontrado.', 'novalog_billing_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/novalog/billings/:id/close', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('update', novalogBillingPermissions, req.auth?.role), 'Sem permissao para fechar faturamentos Novalog.')) {
+      return;
+    }
+
+    const billing = await closeNovalogBilling(req.auth, req.params.id);
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('Faturamento nao encontrado.', 'novalog_billing_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/novalog/billing-items/:id/receive', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('update', novalogBillingPermissions, req.auth?.role), 'Sem permissao para baixar CT-es Novalog.')) {
+      return;
+    }
+
+    const billing = await changeNovalogBillingItemStatus(req.auth, req.params.id, 'received');
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('CT-e nao encontrado.', 'novalog_billing_item_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/novalog/billing-items/:id/overdue', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('update', novalogBillingPermissions, req.auth?.role), 'Sem permissao para marcar CT-es em atraso.')) {
+      return;
+    }
+
+    const billing = await changeNovalogBillingItemStatus(req.auth, req.params.id, 'overdue');
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('CT-e nao encontrado.', 'novalog_billing_item_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/novalog/billing-items/:id/cancel', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
+  try {
+    if (!ensureAllowed(res, canPerform('update', novalogBillingPermissions, req.auth?.role), 'Sem permissao para cancelar CT-es.')) {
+      return;
+    }
+
+    const billing = await changeNovalogBillingItemStatus(req.auth, req.params.id, 'canceled');
+    if (!billing) {
+      sendErrorResponse(res, notFoundError('CT-e nao encontrado.', 'novalog_billing_item_not_found'));
+      return;
+    }
+
+    res.json(billing);
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get('/novalog/entries', loadAuthContext, async (req: AuthenticatedRequest, res, next) => {
   try {

@@ -10,6 +10,7 @@ interface NovalogAutocompleteSelectProps {
   placeholder?: string;
   className?: string;
   error?: string;
+  allowFreeText?: boolean;
 }
 
 export default function NovalogAutocompleteSelect({
@@ -19,6 +20,7 @@ export default function NovalogAutocompleteSelect({
   placeholder = 'Digite para buscar',
   className,
   error,
+  allowFreeText = true,
 }: NovalogAutocompleteSelectProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -37,6 +39,20 @@ export default function NovalogAutocompleteSelect({
 
   const commitFreeText = (nextValue: string) => {
     const trimmed = nextValue.trim();
+
+    if (!allowFreeText) {
+      const option = options.find((item) => item.label.trim().toLowerCase() === trimmed.toLowerCase());
+      if (option) {
+        applyOption(option);
+        return;
+      }
+
+      onChange('');
+      setQuery('');
+      setIsFocused(false);
+      return;
+    }
+
     onChange(trimmed);
     setQuery(trimmed);
     setIsFocused(false);
